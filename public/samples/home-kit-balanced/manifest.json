@@ -1,0 +1,879 @@
+{
+  "id": "home-kit-balanced",
+  "name": "Strike Sound Home Kit Balanced",
+  "root": "samples/home-kit-balanced",
+  "sampleRate": 44100,
+  "bitDepth": 24,
+  "layers": {
+    "kick": {
+      "close": [
+        {
+          "velocity": 0.125,
+          "path": "kick/close-004.wav"
+        },
+        {
+          "velocity": 0.25,
+          "path": "kick/close-008.wav"
+        },
+        {
+          "velocity": 0.375,
+          "path": "kick/close-012.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "kick/close-016.wav"
+        },
+        {
+          "velocity": 0.625,
+          "path": "kick/close-020.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "kick/close-024.wav"
+        },
+        {
+          "velocity": 0.875,
+          "path": "kick/close-028.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "kick/close-032.wav"
+        }
+      ],
+      "overheads": [
+        {
+          "velocity": 0.125,
+          "path": "kick/overheads-004.wav"
+        },
+        {
+          "velocity": 0.25,
+          "path": "kick/overheads-008.wav"
+        },
+        {
+          "velocity": 0.375,
+          "path": "kick/overheads-012.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "kick/overheads-016.wav"
+        },
+        {
+          "velocity": 0.625,
+          "path": "kick/overheads-020.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "kick/overheads-024.wav"
+        },
+        {
+          "velocity": 0.875,
+          "path": "kick/overheads-028.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "kick/overheads-032.wav"
+        }
+      ],
+      "room": [
+        {
+          "velocity": 0.125,
+          "path": "kick/room-004.wav"
+        },
+        {
+          "velocity": 0.25,
+          "path": "kick/room-008.wav"
+        },
+        {
+          "velocity": 0.375,
+          "path": "kick/room-012.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "kick/room-016.wav"
+        },
+        {
+          "velocity": 0.625,
+          "path": "kick/room-020.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "kick/room-024.wav"
+        },
+        {
+          "velocity": 0.875,
+          "path": "kick/room-028.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "kick/room-032.wav"
+        }
+      ]
+    },
+    "snare": {
+      "close": [
+        {
+          "velocity": 0.125,
+          "path": "snare/close-004.wav"
+        },
+        {
+          "velocity": 0.25,
+          "path": "snare/close-008.wav"
+        },
+        {
+          "velocity": 0.375,
+          "path": "snare/close-012.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "snare/close-016.wav"
+        },
+        {
+          "velocity": 0.625,
+          "path": "snare/close-020.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "snare/close-024.wav"
+        },
+        {
+          "velocity": 0.875,
+          "path": "snare/close-028.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "snare/close-032.wav"
+        }
+      ],
+      "overheads": [
+        {
+          "velocity": 0.125,
+          "path": "snare/overheads-004.wav"
+        },
+        {
+          "velocity": 0.25,
+          "path": "snare/overheads-008.wav"
+        },
+        {
+          "velocity": 0.375,
+          "path": "snare/overheads-012.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "snare/overheads-016.wav"
+        },
+        {
+          "velocity": 0.625,
+          "path": "snare/overheads-020.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "snare/overheads-024.wav"
+        },
+        {
+          "velocity": 0.875,
+          "path": "snare/overheads-028.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "snare/overheads-032.wav"
+        }
+      ],
+      "room": [
+        {
+          "velocity": 0.125,
+          "path": "snare/room-004.wav"
+        },
+        {
+          "velocity": 0.25,
+          "path": "snare/room-008.wav"
+        },
+        {
+          "velocity": 0.375,
+          "path": "snare/room-012.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "snare/room-016.wav"
+        },
+        {
+          "velocity": 0.625,
+          "path": "snare/room-020.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "snare/room-024.wav"
+        },
+        {
+          "velocity": 0.875,
+          "path": "snare/room-028.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "snare/room-032.wav"
+        }
+      ]
+    },
+    "snare-rim": {
+      "close": [
+        {
+          "velocity": 0.25,
+          "path": "snare-rim/close-002.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "snare-rim/close-004.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "snare-rim/close-006.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "snare-rim/close-008.wav"
+        }
+      ],
+      "overheads": [
+        {
+          "velocity": 0.25,
+          "path": "snare-rim/overheads-002.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "snare-rim/overheads-004.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "snare-rim/overheads-006.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "snare-rim/overheads-008.wav"
+        }
+      ],
+      "room": [
+        {
+          "velocity": 0.25,
+          "path": "snare-rim/room-002.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "snare-rim/room-004.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "snare-rim/room-006.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "snare-rim/room-008.wav"
+        }
+      ]
+    },
+    "snare-crossstick": {
+      "close": [
+        {
+          "velocity": 0.25,
+          "path": "snare-crossstick/close-002.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "snare-crossstick/close-004.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "snare-crossstick/close-006.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "snare-crossstick/close-008.wav"
+        }
+      ],
+      "overheads": [
+        {
+          "velocity": 0.25,
+          "path": "snare-crossstick/overheads-002.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "snare-crossstick/overheads-004.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "snare-crossstick/overheads-006.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "snare-crossstick/overheads-008.wav"
+        }
+      ],
+      "room": [
+        {
+          "velocity": 0.25,
+          "path": "snare-crossstick/room-002.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "snare-crossstick/room-004.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "snare-crossstick/room-006.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "snare-crossstick/room-008.wav"
+        }
+      ]
+    },
+    "floor-tom": {
+      "close": [
+        {
+          "velocity": 0.125,
+          "path": "floor-tom/close-004.wav"
+        },
+        {
+          "velocity": 0.25,
+          "path": "floor-tom/close-008.wav"
+        },
+        {
+          "velocity": 0.375,
+          "path": "floor-tom/close-012.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "floor-tom/close-016.wav"
+        },
+        {
+          "velocity": 0.625,
+          "path": "floor-tom/close-020.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "floor-tom/close-024.wav"
+        },
+        {
+          "velocity": 0.875,
+          "path": "floor-tom/close-028.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "floor-tom/close-032.wav"
+        }
+      ],
+      "overheads": [
+        {
+          "velocity": 0.125,
+          "path": "floor-tom/overheads-004.wav"
+        },
+        {
+          "velocity": 0.25,
+          "path": "floor-tom/overheads-008.wav"
+        },
+        {
+          "velocity": 0.375,
+          "path": "floor-tom/overheads-012.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "floor-tom/overheads-016.wav"
+        },
+        {
+          "velocity": 0.625,
+          "path": "floor-tom/overheads-020.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "floor-tom/overheads-024.wav"
+        },
+        {
+          "velocity": 0.875,
+          "path": "floor-tom/overheads-028.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "floor-tom/overheads-032.wav"
+        }
+      ],
+      "room": [
+        {
+          "velocity": 0.125,
+          "path": "floor-tom/room-004.wav"
+        },
+        {
+          "velocity": 0.25,
+          "path": "floor-tom/room-008.wav"
+        },
+        {
+          "velocity": 0.375,
+          "path": "floor-tom/room-012.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "floor-tom/room-016.wav"
+        },
+        {
+          "velocity": 0.625,
+          "path": "floor-tom/room-020.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "floor-tom/room-024.wav"
+        },
+        {
+          "velocity": 0.875,
+          "path": "floor-tom/room-028.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "floor-tom/room-032.wav"
+        }
+      ]
+    },
+    "rack-tom": {
+      "close": [
+        {
+          "velocity": 0.125,
+          "path": "rack-tom/close-004.wav"
+        },
+        {
+          "velocity": 0.25,
+          "path": "rack-tom/close-008.wav"
+        },
+        {
+          "velocity": 0.375,
+          "path": "rack-tom/close-012.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "rack-tom/close-016.wav"
+        },
+        {
+          "velocity": 0.625,
+          "path": "rack-tom/close-020.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "rack-tom/close-024.wav"
+        },
+        {
+          "velocity": 0.875,
+          "path": "rack-tom/close-028.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "rack-tom/close-032.wav"
+        }
+      ],
+      "overheads": [
+        {
+          "velocity": 0.125,
+          "path": "rack-tom/overheads-004.wav"
+        },
+        {
+          "velocity": 0.25,
+          "path": "rack-tom/overheads-008.wav"
+        },
+        {
+          "velocity": 0.375,
+          "path": "rack-tom/overheads-012.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "rack-tom/overheads-016.wav"
+        },
+        {
+          "velocity": 0.625,
+          "path": "rack-tom/overheads-020.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "rack-tom/overheads-024.wav"
+        },
+        {
+          "velocity": 0.875,
+          "path": "rack-tom/overheads-028.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "rack-tom/overheads-032.wav"
+        }
+      ],
+      "room": [
+        {
+          "velocity": 0.125,
+          "path": "rack-tom/room-004.wav"
+        },
+        {
+          "velocity": 0.25,
+          "path": "rack-tom/room-008.wav"
+        },
+        {
+          "velocity": 0.375,
+          "path": "rack-tom/room-012.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "rack-tom/room-016.wav"
+        },
+        {
+          "velocity": 0.625,
+          "path": "rack-tom/room-020.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "rack-tom/room-024.wav"
+        },
+        {
+          "velocity": 0.875,
+          "path": "rack-tom/room-028.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "rack-tom/room-032.wav"
+        }
+      ]
+    },
+    "hat-closed": {
+      "overheads": [
+        {
+          "velocity": 0.25,
+          "path": "hat-closed/overheads-004.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "hat-closed/overheads-008.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "hat-closed/overheads-012.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "hat-closed/overheads-016.wav"
+        }
+      ],
+      "room": [
+        {
+          "velocity": 0.25,
+          "path": "hat-closed/room-004.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "hat-closed/room-008.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "hat-closed/room-012.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "hat-closed/room-016.wav"
+        }
+      ]
+    },
+    "hat-open": {
+      "overheads": [
+        {
+          "velocity": 0.25,
+          "path": "hat-open/overheads-004.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "hat-open/overheads-008.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "hat-open/overheads-012.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "hat-open/overheads-016.wav"
+        }
+      ],
+      "room": [
+        {
+          "velocity": 0.25,
+          "path": "hat-open/room-004.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "hat-open/room-008.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "hat-open/room-012.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "hat-open/room-016.wav"
+        }
+      ]
+    },
+    "hat-pedal": {
+      "overheads": [
+        {
+          "velocity": 0.25,
+          "path": "hat-pedal/overheads-004.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "hat-pedal/overheads-008.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "hat-pedal/overheads-012.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "hat-pedal/overheads-016.wav"
+        }
+      ],
+      "room": [
+        {
+          "velocity": 0.25,
+          "path": "hat-pedal/room-004.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "hat-pedal/room-008.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "hat-pedal/room-012.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "hat-pedal/room-016.wav"
+        }
+      ]
+    },
+    "ride-bow": {
+      "overheads": [
+        {
+          "velocity": 0.25,
+          "path": "ride-bow/overheads-004.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "ride-bow/overheads-008.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "ride-bow/overheads-012.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "ride-bow/overheads-016.wav"
+        }
+      ],
+      "room": [
+        {
+          "velocity": 0.25,
+          "path": "ride-bow/room-004.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "ride-bow/room-008.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "ride-bow/room-012.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "ride-bow/room-016.wav"
+        }
+      ]
+    },
+    "ride-bell": {
+      "overheads": [
+        {
+          "velocity": 0.25,
+          "path": "ride-bell/overheads-004.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "ride-bell/overheads-008.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "ride-bell/overheads-012.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "ride-bell/overheads-016.wav"
+        }
+      ],
+      "room": [
+        {
+          "velocity": 0.25,
+          "path": "ride-bell/room-004.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "ride-bell/room-008.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "ride-bell/room-012.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "ride-bell/room-016.wav"
+        }
+      ]
+    },
+    "ride-crash": {
+      "overheads": [
+        {
+          "velocity": 0.25,
+          "path": "ride-crash/overheads-004.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "ride-crash/overheads-008.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "ride-crash/overheads-012.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "ride-crash/overheads-016.wav"
+        }
+      ],
+      "room": [
+        {
+          "velocity": 0.25,
+          "path": "ride-crash/room-004.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "ride-crash/room-008.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "ride-crash/room-012.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "ride-crash/room-016.wav"
+        }
+      ]
+    },
+    "crash-left": {
+      "overheads": [
+        {
+          "velocity": 0.25,
+          "path": "crash-left/overheads-004.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "crash-left/overheads-008.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "crash-left/overheads-012.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "crash-left/overheads-016.wav"
+        }
+      ],
+      "room": [
+        {
+          "velocity": 0.25,
+          "path": "crash-left/room-004.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "crash-left/room-008.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "crash-left/room-012.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "crash-left/room-016.wav"
+        }
+      ]
+    },
+    "crash-right": {
+      "overheads": [
+        {
+          "velocity": 0.25,
+          "path": "crash-right/overheads-004.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "crash-right/overheads-008.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "crash-right/overheads-012.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "crash-right/overheads-016.wav"
+        }
+      ],
+      "room": [
+        {
+          "velocity": 0.25,
+          "path": "crash-right/room-004.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "crash-right/room-008.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "crash-right/room-012.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "crash-right/room-016.wav"
+        }
+      ]
+    },
+    "stick-click": {
+      "overheads": [
+        {
+          "velocity": 0.25,
+          "path": "stick-click/overheads-002.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "stick-click/overheads-004.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "stick-click/overheads-006.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "stick-click/overheads-008.wav"
+        }
+      ],
+      "room": [
+        {
+          "velocity": 0.25,
+          "path": "stick-click/room-002.wav"
+        },
+        {
+          "velocity": 0.5,
+          "path": "stick-click/room-004.wav"
+        },
+        {
+          "velocity": 0.75,
+          "path": "stick-click/room-006.wav"
+        },
+        {
+          "velocity": 1,
+          "path": "stick-click/room-008.wav"
+        }
+      ]
+    }
+  }
+}

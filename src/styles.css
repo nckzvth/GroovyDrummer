@@ -424,7 +424,7 @@ h1 {
 .table-head,
 .groove-row {
   display: grid;
-  grid-template-columns: 42px 44px minmax(170px, 1.15fr) minmax(220px, 1fr) 116px 46px;
+  grid-template-columns: 42px 44px minmax(170px, 1.15fr) minmax(220px, 1fr) 116px 94px;
   align-items: center;
   column-gap: 10px;
 }
@@ -547,6 +547,18 @@ h1 {
   white-space: nowrap;
 }
 
+.row-export-menu {
+  width: 100%;
+  height: 34px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel);
+  color: var(--ink);
+  padding: 0 7px;
+  font-size: 12px;
+}
+
 .empty-state,
 .fatal {
   padding: 32px;
@@ -612,7 +624,7 @@ h1 {
 
   .table-head,
   .groove-row {
-    grid-template-columns: 36px 40px minmax(150px, 1fr) 90px 40px;
+    grid-template-columns: 36px 40px minmax(150px, 1fr) 90px 86px;
   }
 
   .table-head span:nth-child(4),
@@ -668,10 +680,10 @@ h1 {
   }
 
   .groove-row {
-    grid-template-columns: 32px 38px minmax(0, 1fr) 38px;
+    grid-template-columns: 32px 38px minmax(0, 1fr) 86px;
     grid-template-areas:
-      "check play title download"
-      "check play hits download";
+      "check play title export"
+      "check play hits export";
     row-gap: 5px;
     min-height: 78px;
   }
@@ -693,7 +705,7 @@ h1 {
     text-align: left;
   }
 
-  .groove-row > button:last-child {
-    grid-area: download;
+  .row-export-menu {
+    grid-area: export;
   }
 }

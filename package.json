@@ -4,10 +4,12 @@
   "private": false,
   "type": "module",
   "scripts": {
-    "predev": "npm run generate:catalog",
+    "predev": "npm run generate:catalog && npm run verify-home-kit",
     "dev": "vite --host 0.0.0.0",
+    "prepare:home-kit": "node scripts/prepare-home-kit.mjs",
+    "verify-home-kit": "node scripts/verify-home-kit.mjs",
     "generate:catalog": "node scripts/generate-catalog.mjs",
-    "build": "npm run generate:catalog && tsc --noEmit && vite build",
+    "build": "npm run generate:catalog && npm run verify-home-kit && tsc --noEmit && vite build",
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {

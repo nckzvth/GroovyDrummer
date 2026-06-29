@@ -1,32 +1,81 @@
-import { Midi } from "@tonejs/midi";
 import * as Tone from "tone";
+import { startToneAudio } from "./audioStart";
 import { drumGroupForNote, isOpenHatNote, isRideBellNote } from "./drumMap";
-import type { Groove } from "./types";
+import { HomeKitSampleEngine } from "./homeKitEngine";
+import { loadGrooveMidi, makePlaybackSchedule } from "./midi";
+import type { Groove, PreviewEngineMode } from "./types";
 
-type MidiInstance = InstanceType<typeof Midi>;
+const syntheticSettings = { volume: -9, cymbal: 0.72, snare: 0.92, hat: 0.68, tom: 0.88 };
 
-export type KitId = "studio" | "tight" | "room";
-
-const kitSettings: Record<KitId, { volume: number; cymbal: number; snare: number; hat: number; tom: number }> = {
-  studio: { volume: -7, cymbal: 0.72, snare: 0.92, hat: 0.68, tom: 0.88 },
-  tight: { volume: -6, cymbal: 0.45, snare: 1, hat: 0.55, tom: 0.72 },
-  room: { volume: -9, cymbal: 0.95, snare: 0.78, hat: 0.8, tom: 1 },
-};
-
-export const kitOptions: Array<{ id: KitId; name: string }> = [
-  { id: "studio", name: "Studio GM" },
-  { id: "tight", name: "Tight Room" },
-  { id: "room", name: "Wide Room" },
+export const previewEngineOptions: Array<{ id: PreviewEngineMode; name: string }> = [
+  { id: "home-kit", name: "Home Kit" },
+  { id: "synthetic", name: "Synthetic fallback" },
 ];
 
-const midiCache = new Map<string, MidiInstance>();
+export class DrumPreviewEngine {
+  private readonly homeKit = new HomeKitSampleEngine();
+  private readonly synthetic = new SyntheticDrumPreviewEngine();
+  private mode: PreviewEngineMode = "home-kit";
 
-function assetUrl(assetPath: string) {
-  return new URL(assetPath, window.location.href).toString();
+  onStop: (() => void) | null = null;
+  onStatus: ((message: string) => void) | null = null;
+
+  constructor() {
+    this.homeKit.onStop = () => {
+      if (this.mode === "home-kit") {
+        this.onStop?.();
+      }
+    };
+    this.synthetic.onStop = () => {
+      if (this.mode === "synthetic") {
+        this.onStop?.();
+      }
+    };
+    this.homeKit.onStatus = (message) => {
+      if (this.mode === "home-kit") {
+        this.onStatus?.(message);
+      }
+    };
+  }
+
+  async play(groove: Groove, loop: boolean, tempoOverride?: number) {
+    await this.activeEngine().play(groove, loop, tempoOverride);
+  }
+
+  stop(emit = true) {
+    this.homeKit.stop(false);
+    this.synthetic.stop(false);
+
+    if (emit) {
+      this.onStop?.();
+    }
+  }
+
+  setVolume(db: number) {
+    this.homeKit.setVolume(db);
+    this.synthetic.setVolume(db);
+  }
+
+  setMode(mode: PreviewEngineMode) {
+    if (mode === this.mode) {
+      return;
+    }
+
+    this.stop(false);
+    this.mode = mode;
+  }
+
+  getMode() {
+    return this.mode;
+  }
+
+  private activeEngine() {
+    return this.mode === "home-kit" ? this.homeKit : this.synthetic;
+  }
 }
 
-export class DrumPreviewEngine {
-  private readonly master = new Tone.Volume(kitSettings.studio.volume).toDestination();
+class SyntheticDrumPreviewEngine {
+  private readonly master = new Tone.Volume(syntheticSettings.volume).toDestination();
   private readonly kick = new Tone.MembraneSynth({
     pitchDecay: 0.045,
     octaves: 7,
@@ -75,42 +124,34 @@ export class DrumPreviewEngine {
     envelope: { attack: 0.002, decay: 0.72, sustain: 0.02, release: 0.16 },
   }).connect(this.cymbalFilter);
 
-  private kit: KitId = "studio";
   private playbackToken = 0;
   onStop: (() => void) | null = null;
 
   async play(groove: Groove, loop: boolean, tempoOverride?: number) {
     const token = ++this.playbackToken;
-    await Tone.start();
+    await startToneAudio();
 
-    const midi = await this.loadMidi(groove);
+    const midi = await loadGrooveMidi(groove);
     if (token !== this.playbackToken) {
       return;
     }
 
     this.clearTransport();
 
-    const notes = midi.tracks
-      .flatMap((track) => track.notes)
+    const schedule = makePlaybackSchedule(groove, midi, tempoOverride);
+    const notes = schedule.notes
       .filter((note) => drumGroupForNote(note.midi) !== null);
-    const originalTempo = midi.header.tempos[0]?.bpm ?? groove.bpm ?? 120;
-    const tempo = tempoOverride ?? originalTempo;
-    if (tempo <= 0) {
-      throw new Error("Tempo must be above 0 BPM");
-    }
-    const timeScale = originalTempo / tempo;
-    const duration = Math.max(midi.duration || groove.duration || 0, 0.25) * timeScale;
 
-    Tone.Transport.bpm.value = tempo;
+    Tone.Transport.bpm.value = schedule.tempo;
     Tone.Transport.loop = loop;
     Tone.Transport.loopStart = 0;
-    Tone.Transport.loopEnd = duration;
+    Tone.Transport.loopEnd = schedule.duration;
     Tone.Transport.seconds = 0;
 
     for (const note of notes) {
       Tone.Transport.schedule((time) => {
         this.trigger(note.midi, time, note.velocity || 0.65);
-      }, note.time * timeScale);
+      }, note.time);
     }
 
     if (!loop) {
@@ -118,7 +159,7 @@ export class DrumPreviewEngine {
         if (this.playbackToken === token) {
           this.stop();
         }
-      }, duration + 0.05);
+      }, schedule.duration + 0.05);
     }
 
     Tone.Transport.start("+0.03");
@@ -143,30 +184,8 @@ export class DrumPreviewEngine {
     this.master.volume.value = db;
   }
 
-  setKit(kit: KitId) {
-    this.kit = kit;
-    this.master.volume.value = kitSettings[kit].volume;
-  }
-
-  private async loadMidi(groove: Groove) {
-    const cached = midiCache.get(groove.assetPath);
-    if (cached) {
-      return cached;
-    }
-
-    const response = await fetch(assetUrl(groove.assetPath));
-    if (!response.ok) {
-      throw new Error(`Unable to load ${groove.grooveName}`);
-    }
-
-    const midi = new Midi(await response.arrayBuffer());
-    midiCache.set(groove.assetPath, midi);
-    return midi;
-  }
-
   private trigger(noteNumber: number, time: number, velocity: number) {
     const v = Math.max(0.08, Math.min(1, velocity));
-    const kit = kitSettings[this.kit];
     const group = drumGroupForNote(noteNumber);
 
     if (!group) {
@@ -179,33 +198,33 @@ export class DrumPreviewEngine {
         break;
       case "snare": {
         const rimScale = [27, 37, 39].includes(noteNumber) ? 0.72 : 1;
-        this.snareBody.triggerAttackRelease("D2", 0.08, time, v * 0.55 * kit.snare * rimScale);
-        this.snareNoise.triggerAttackRelease(0.08, time, v * kit.snare * rimScale);
+        this.snareBody.triggerAttackRelease("D2", 0.08, time, v * 0.55 * syntheticSettings.snare * rimScale);
+        this.snareNoise.triggerAttackRelease(0.08, time, v * syntheticSettings.snare * rimScale);
         break;
       }
       case "hat":
         if (isOpenHatNote(noteNumber)) {
-          this.hatOpen.triggerAttackRelease(0.22, time, v * kit.hat);
+          this.hatOpen.triggerAttackRelease(0.22, time, v * syntheticSettings.hat);
         } else {
-          this.hatClosed.triggerAttackRelease(0.028, time, v * kit.hat);
+          this.hatClosed.triggerAttackRelease(0.028, time, v * syntheticSettings.hat);
         }
         break;
       case "tom":
         if (noteNumber >= 47) {
-          this.tomRack.triggerAttackRelease(noteNumber >= 50 ? "D2" : "C2", 0.15, time, v * kit.tom);
+          this.tomRack.triggerAttackRelease(noteNumber >= 50 ? "D2" : "C2", 0.15, time, v * syntheticSettings.tom);
         } else {
-          this.tomFloor.triggerAttackRelease(noteNumber <= 41 ? "F1" : "G1", 0.2, time, v * kit.tom);
+          this.tomFloor.triggerAttackRelease(noteNumber <= 41 ? "F1" : "G1", 0.2, time, v * syntheticSettings.tom);
         }
         break;
       case "ride":
         if (isRideBellNote(noteNumber)) {
           this.rideBell.triggerAttackRelease("G5", 0.08, time, v * 0.55);
         } else {
-          this.cymbal.triggerAttackRelease(0.42, time, v * 0.44 * kit.cymbal);
+          this.cymbal.triggerAttackRelease(0.42, time, v * 0.44 * syntheticSettings.cymbal);
         }
         break;
       case "crash":
-        this.cymbal.triggerAttackRelease(0.64, time, v * 0.68 * kit.cymbal);
+        this.cymbal.triggerAttackRelease(0.64, time, v * 0.68 * syntheticSettings.cymbal);
         break;
     }
   }

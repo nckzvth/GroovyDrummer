@@ -1,8 +1,6 @@
 import {
   Archive,
   Check,
-  Download,
-  FolderDown,
   Play,
   RotateCcw,
   Search,
@@ -12,15 +10,15 @@ import {
   X,
   createIcons,
 } from "lucide";
-import { DrumPreviewEngine, kitOptions, type KitId } from "./drumEngine";
+import { DrumPreviewEngine, previewEngineOptions } from "./drumEngine";
 import {
-  canSaveToDirectory,
-  downloadGroove,
-  exportGroovesAsZip,
-  saveGroovesToDirectory,
+  downloadGrooveMidi,
+  exportGrooveMixWav,
+  exportGrooveStemZip,
+  exportSelectedAudioZip,
 } from "./exporter";
 import "./styles.css";
-import type { Catalog, DrumGroup, Groove, PackSummary } from "./types";
+import type { AudioExportKind, Catalog, DrumGroup, Groove, PackSummary, PreviewEngineMode } from "./types";
 
 type State = {
   packId: string;
@@ -30,7 +28,7 @@ type State = {
   selectedIds: Set<string>;
   playingId: string | null;
   loop: boolean;
-  kitId: KitId;
+  previewMode: PreviewEngineMode;
   previewTempo: number;
   tempoDirty: boolean;
 };
@@ -43,7 +41,7 @@ const app = appRoot;
 
 const engine = new DrumPreviewEngine();
 const drumGroups: DrumGroup[] = ["kick", "snare", "hat", "tom", "ride", "crash"];
-const icons = { Archive, Check, Download, FolderDown, Play, RotateCcw, Search, Square, Trash2, Volume2, X };
+const icons = { Archive, Check, Play, RotateCcw, Search, Square, Trash2, Volume2, X };
 const maxRenderedRows = 700;
 
 let catalog: Catalog;
@@ -55,6 +53,9 @@ engine.onStop = () => {
   state.playingId = null;
   renderRows();
   setStatus("Ready");
+};
+engine.onStatus = (message) => {
+  setStatus(message);
 };
 
 init().catch((error) => {
@@ -77,7 +78,7 @@ async function init() {
     selectedIds: new Set(),
     playingId: null,
     loop: true,
-    kitId: "studio",
+    previewMode: "home-kit",
     previewTempo: initialTempoForPack(initialPack),
     tempoDirty: false,
   };
@@ -111,7 +112,7 @@ function renderShell() {
           <label class="field">
             <span>Preview kit</span>
             <select id="kitSelect">
-              ${kitOptions.map((kit) => `<option value="${kit.id}">${escapeHtml(kit.name)}</option>`).join("")}
+              ${previewEngineOptions.map((mode) => `<option value="${mode.id}">${escapeHtml(mode.name)}</option>`).join("")}
             </select>
           </label>
           <label class="toggle">
@@ -134,7 +135,7 @@ function renderShell() {
             </label>
             <label class="volume">
               <i data-lucide="volume-2"></i>
-              <input id="volumeInput" type="range" min="-24" max="0" step="1" value="-7" />
+              <input id="volumeInput" type="range" min="-24" max="0" step="1" value="${kitVolume(state.previewMode)}" />
             </label>
             <div class="tempo-control" role="group" aria-label="Preview tempo">
               <span>Tempo <strong id="tempoMode">Auto</strong></span>
@@ -163,13 +164,17 @@ function renderShell() {
             <span id="statusText">Ready</span>
           </div>
           <div class="export-actions">
-            <button class="text-button" id="saveFolderButton" type="button">
-              <i data-lucide="folder-down"></i>
-              <span>${canSaveToDirectory() ? "Save to folder" : "ZIP output"}</span>
-            </button>
-            <button class="text-button" id="zipButton" type="button">
+            <button class="text-button" id="midiZipButton" type="button">
               <i data-lucide="archive"></i>
-              <span>ZIP</span>
+              <span>MIDI ZIP</span>
+            </button>
+            <button class="text-button" id="mixZipButton" type="button">
+              <i data-lucide="archive"></i>
+              <span>Mix WAV ZIP</span>
+            </button>
+            <button class="text-button" id="stemsZipButton" type="button">
+              <i data-lucide="archive"></i>
+              <span>Stems ZIP</span>
             </button>
             <button class="icon-button" id="clearSelectionButton" type="button" title="Clear selection" aria-label="Clear selection">
               <i data-lucide="x"></i>
@@ -186,7 +191,7 @@ function renderShell() {
             <span>Name</span>
             <span>Pattern</span>
             <span class="right">Hits</span>
-            <span></span>
+            <span>Export</span>
           </div>
           <div class="rows" id="rows"></div>
         </section>
@@ -236,9 +241,12 @@ function bindEvents() {
   });
 
   byId<HTMLSelectElement>("kitSelect").addEventListener("change", (event) => {
-    state.kitId = (event.currentTarget as HTMLSelectElement).value as KitId;
-    engine.setKit(state.kitId);
-    byId<HTMLInputElement>("volumeInput").value = String(kitVolume(state.kitId));
+    state.previewMode = (event.currentTarget as HTMLSelectElement).value as PreviewEngineMode;
+    engine.setMode(state.previewMode);
+    const volume = kitVolume(state.previewMode);
+    engine.setVolume(volume);
+    byId<HTMLInputElement>("volumeInput").value = String(volume);
+    restartPlayingGroove();
   });
 
   byId<HTMLInputElement>("tempoNumber").addEventListener("keydown", (event) => {
@@ -295,9 +303,23 @@ function bindEvents() {
       void togglePlayback(groove);
     }
 
-    if (button.dataset.action === "download") {
-      void runExportAction([groove], () => downloadGroove(groove), `Downloaded ${groove.grooveName}`);
+  });
+
+  byId("rows").addEventListener("change", (event) => {
+    const select = (event.target as HTMLElement).closest<HTMLSelectElement>("select[data-export-id]");
+    if (!select) {
+      return;
     }
+
+    const groove = catalog.grooves.find((item) => item.id === select.dataset.exportId);
+    const kind = select.value as AudioExportKind | "";
+    select.value = "";
+
+    if (!groove || !kind) {
+      return;
+    }
+
+    void runExportAction([groove], () => runSingleGrooveExport(groove, kind), singleExportMessage(groove, kind));
   });
 
   byId<HTMLInputElement>("selectVisibleInput").addEventListener("change", (event) => {
@@ -319,12 +341,27 @@ function bindEvents() {
     renderSelection();
   });
 
-  byId("zipButton").addEventListener("click", () => {
-    void runExportAction(selectedGrooves(), () => exportGroovesAsZip(selectedGrooves()), "ZIP ready");
+  byId("midiZipButton").addEventListener("click", () => {
+    const grooves = selectedGrooves();
+    void runExportAction(grooves, () => exportSelectedAudioZip(grooves, "midi", effectivePreviewTempo), "ZIP ready");
   });
 
-  byId("saveFolderButton").addEventListener("click", () => {
-    void runExportAction(selectedGrooves(), () => saveGroovesToDirectory(selectedGrooves()), "Saved to output");
+  byId("mixZipButton").addEventListener("click", () => {
+    const grooves = selectedGrooves();
+    void runExportAction(
+      grooves,
+      () => exportSelectedAudioZip(grooves, "mix-wav", effectivePreviewTempo, renderProgress),
+      "ZIP ready",
+    );
+  });
+
+  byId("stemsZipButton").addEventListener("click", () => {
+    const grooves = selectedGrooves();
+    void runExportAction(
+      grooves,
+      () => exportSelectedAudioZip(grooves, "stems-zip", effectivePreviewTempo, renderProgress),
+      "ZIP ready",
+    );
   });
 }
 
@@ -440,9 +477,12 @@ function rowHtml(groove: Groove) {
       </div>
       ${patternHtml(groove)}
       <div class="hit-summary">${escapeHtml(hits)}</div>
-      <button class="icon-button" type="button" data-action="download" data-id="${groove.id}" title="Download MIDI" aria-label="Download ${escapeHtml(groove.grooveName)}">
-        <i data-lucide="download"></i>
-      </button>
+      <select class="row-export-menu" data-export-id="${groove.id}" aria-label="Export ${escapeHtml(groove.grooveName)}">
+        <option value="">Export</option>
+        <option value="midi">MIDI</option>
+        <option value="mix-wav">Mix WAV</option>
+        <option value="stems-zip">Stems ZIP</option>
+      </select>
     </article>
   `;
 }
@@ -479,10 +519,13 @@ async function startPlayback(groove: Groove) {
 
   state.playingId = groove.id;
   renderRows();
-  setStatus(`Playing ${groove.grooveName} at ${formatTempo(previewTempo)} BPM`);
+  setStatus(`Loading ${groove.grooveName}`);
 
   try {
     await engine.play(groove, state.loop, previewTempo);
+    if (state.playingId === groove.id) {
+      setStatus(`Playing ${groove.grooveName} at ${formatTempo(previewTempo)} BPM`);
+    }
   } catch (error) {
     state.playingId = null;
     renderRows();
@@ -518,6 +561,33 @@ async function runExportAction(grooves: Groove[], action: () => Promise<void>, d
   }
 }
 
+async function runSingleGrooveExport(groove: Groove, kind: AudioExportKind) {
+  if (kind === "midi") {
+    await downloadGrooveMidi(groove);
+    return;
+  }
+
+  const tempo = effectivePreviewTempo(groove);
+  setStatus(`Rendering ${groove.grooveName}`);
+
+  if (kind === "mix-wav") {
+    await exportGrooveMixWav(groove, tempo);
+  } else {
+    await exportGrooveStemZip(groove, tempo);
+  }
+}
+
+function singleExportMessage(groove: Groove, kind: AudioExportKind) {
+  if (kind === "midi") {
+    return `Downloaded ${groove.grooveName}`;
+  }
+  return kind === "mix-wav" ? "Mix WAV ready" : "Stems ZIP ready";
+}
+
+function renderProgress(current: number, total: number, groove: Groove) {
+  setStatus(`Rendering ${current}/${total}: ${groove.grooveName}`);
+}
+
 function toggleSelection(id: string, selected: boolean) {
   if (!id) {
     return;
@@ -536,14 +606,16 @@ function toggleSelection(id: string, selected: boolean) {
 function renderSelection() {
   const count = state.selectedIds.size;
   byId("selectedCount").textContent = `${count} selected`;
-  byId<HTMLButtonElement>("zipButton").disabled = count === 0;
-  byId<HTMLButtonElement>("saveFolderButton").disabled = count === 0;
+  byId<HTMLButtonElement>("midiZipButton").disabled = count === 0;
+  byId<HTMLButtonElement>("mixZipButton").disabled = count === 0;
+  byId<HTMLButtonElement>("stemsZipButton").disabled = count === 0;
   byId<HTMLButtonElement>("clearSelectionButton").disabled = count === 0;
 }
 
 function setExportButtons(enabled: boolean) {
-  byId<HTMLButtonElement>("zipButton").disabled = !enabled || state.selectedIds.size === 0;
-  byId<HTMLButtonElement>("saveFolderButton").disabled = !enabled || state.selectedIds.size === 0;
+  byId<HTMLButtonElement>("midiZipButton").disabled = !enabled || state.selectedIds.size === 0;
+  byId<HTMLButtonElement>("mixZipButton").disabled = !enabled || state.selectedIds.size === 0;
+  byId<HTMLButtonElement>("stemsZipButton").disabled = !enabled || state.selectedIds.size === 0;
 }
 
 function updateSelectVisibleInput() {
@@ -701,14 +773,11 @@ function packFromHash(packs: PackSummary[]) {
   return packs.some((pack) => pack.id === hash) ? hash : null;
 }
 
-function kitVolume(kitId: State["kitId"]) {
-  if (kitId === "tight") {
-    return -6;
-  }
-  if (kitId === "room") {
+function kitVolume(previewMode: State["previewMode"]) {
+  if (previewMode === "synthetic") {
     return -9;
   }
-  return -7;
+  return -6;
 }
 
 function initialTempoForPack(packId: string) {

@@ -1,5 +1,7 @@
 import JSZip from "jszip";
-import type { Groove } from "./types";
+import { renderGrooveStems, renderGrooveWavBlob } from "./audioRenderer";
+import { assetUrl } from "./midi";
+import type { AudioExportKind, Groove } from "./types";
 
 type WritableLike = {
   write(data: Blob | BufferSource | string): Promise<void>;
@@ -19,10 +21,6 @@ type WindowWithDirectoryPicker = Window & {
   showDirectoryPicker?: (options?: { mode?: "read" | "readwrite" }) => Promise<DirectoryHandleLike>;
 };
 
-function assetUrl(assetPath: string) {
-  return new URL(assetPath, window.location.href).toString();
-}
-
 function sanitizeSegment(value: string) {
   return value
     .replace(/[<>:"/\\|?*\x00-\x1F]/g, " ")
@@ -38,19 +36,22 @@ export function canSaveToDirectory() {
   return typeof (window as WindowWithDirectoryPicker).showDirectoryPicker === "function";
 }
 
-export function fileNameForGroove(groove: Groove) {
+export function fileNameForGrooveMidi(groove: Groove) {
   return `${sanitizeSegment(groove.packName)} - ${sanitizeSegment(groove.tempoLabel)} - ${sanitizeSegment(groove.categoryName)} - ${sanitizeSegment(groove.grooveName)}.mid`;
 }
 
-export function outputPathForGroove(groove: Groove) {
+export function outputPathForGrooveMidi(groove: Groove) {
   return [
     "output",
     sanitizeSegment(groove.packName),
     sanitizeSegment(groove.tempoLabel),
     sanitizeSegment(groove.categoryName),
-    fileNameForGroove(groove),
+    fileNameForGrooveMidi(groove),
   ].join("/");
 }
+
+export const fileNameForGroove = fileNameForGrooveMidi;
+export const outputPathForGroove = outputPathForGrooveMidi;
 
 export async function fetchGrooveBlob(groove: Groove) {
   const response = await fetch(assetUrl(groove.assetPath));
@@ -61,20 +62,63 @@ export async function fetchGrooveBlob(groove: Groove) {
   return response.blob();
 }
 
-export async function downloadGroove(groove: Groove) {
+export async function downloadGrooveMidi(groove: Groove) {
   const blob = await fetchGrooveBlob(groove);
-  saveBlob(blob, fileNameForGroove(groove));
+  saveBlob(blob, fileNameForGrooveMidi(groove));
 }
+
+export const downloadGroove = downloadGrooveMidi;
 
 export async function exportGroovesAsZip(grooves: Groove[]) {
   const zip = new JSZip();
 
   for (const groove of grooves) {
-    zip.file(outputPathForGroove(groove), await fetchGrooveBlob(groove));
+    zip.file(outputPathForGrooveMidi(groove), await fetchGrooveBlob(groove));
   }
 
   const blob = await zip.generateAsync({ type: "blob" });
-  saveBlob(blob, `GroovyDrummer-output-${dateStamp()}.zip`);
+  saveBlob(blob, `GroovyDrummer-midi-${dateStamp()}.zip`);
+}
+
+export async function exportGrooveMixWav(groove: Groove, tempo: number) {
+  const blob = await renderGrooveWavBlob(groove, tempo, "full-kit");
+  saveBlob(blob, mixFileNameForGroove(groove, tempo));
+}
+
+export async function exportGrooveStemZip(groove: Groove, tempo: number) {
+  const zip = new JSZip();
+  await addStemPackage(zip, groove, tempo);
+  const blob = await zip.generateAsync({ type: "blob" });
+  saveBlob(blob, `${sanitizeSegment(groove.grooveName)}-${formatTempo(tempo)}bpm-stems.zip`);
+}
+
+export async function exportSelectedAudioZip(
+  grooves: Groove[],
+  kind: AudioExportKind,
+  tempoResolver: (groove: Groove) => number,
+  onProgress?: (current: number, total: number, groove: Groove) => void,
+) {
+  if (kind === "midi") {
+    await exportGroovesAsZip(grooves);
+    return;
+  }
+
+  const zip = new JSZip();
+
+  for (let index = 0; index < grooves.length; index += 1) {
+    const groove = grooves[index];
+    const tempo = tempoResolver(groove);
+    onProgress?.(index + 1, grooves.length, groove);
+
+    if (kind === "mix-wav") {
+      zip.file(outputPathForMix(groove, tempo), await renderGrooveWavBlob(groove, tempo, "full-kit"));
+    } else {
+      await addStemPackage(zip, groove, tempo);
+    }
+  }
+
+  const blob = await zip.generateAsync({ type: "blob" });
+  saveBlob(blob, `GroovyDrummer-${kind === "mix-wav" ? "mix-wavs" : "stems"}-${dateStamp()}.zip`);
 }
 
 export async function saveGroovesToDirectory(grooves: Groove[]) {
@@ -88,14 +132,58 @@ export async function saveGroovesToDirectory(grooves: Groove[]) {
   const outputDir = await root.getDirectoryHandle("output", { create: true });
 
   for (const groove of grooves) {
-    const packDir = await outputDir.getDirectoryHandle(sanitizeSegment(groove.packName), { create: true });
-    const tempoDir = await packDir.getDirectoryHandle(sanitizeSegment(groove.tempoLabel), { create: true });
-    const categoryDir = await tempoDir.getDirectoryHandle(sanitizeSegment(groove.categoryName), { create: true });
-    const fileHandle = await categoryDir.getFileHandle(fileNameForGroove(groove), { create: true });
+      const packDir = await outputDir.getDirectoryHandle(sanitizeSegment(groove.packName), { create: true });
+      const tempoDir = await packDir.getDirectoryHandle(sanitizeSegment(groove.tempoLabel), { create: true });
+      const categoryDir = await tempoDir.getDirectoryHandle(sanitizeSegment(groove.categoryName), { create: true });
+    const fileHandle = await categoryDir.getFileHandle(fileNameForGrooveMidi(groove), { create: true });
     const writable = await fileHandle.createWritable();
     await writable.write(await fetchGrooveBlob(groove));
     await writable.close();
   }
+}
+
+function mixFileNameForGroove(groove: Groove, tempo: number) {
+  return `${sanitizeSegment(groove.grooveName)} - ${formatTempo(tempo)}BPM - full-kit.wav`;
+}
+
+function outputFolderForAudio(groove: Groove) {
+  return [
+    "output",
+    sanitizeSegment(groove.packName),
+    sanitizeSegment(groove.tempoLabel),
+    sanitizeSegment(groove.categoryName),
+    sanitizeSegment(groove.grooveName),
+  ].join("/");
+}
+
+function outputPathForMix(groove: Groove, tempo: number) {
+  return [outputFolderForAudio(groove), mixFileNameForGroove(groove, tempo)].join("/");
+}
+
+async function addStemPackage(zip: JSZip, groove: Groove, tempo: number) {
+  const folder = outputFolderForAudio(groove);
+  const stems = await renderGrooveStems(groove, tempo);
+
+  for (const stem of stems) {
+    zip.file([folder, stem.fileName].join("/"), stem.blob);
+  }
+
+  zip.file([folder, fileNameForGrooveMidi(groove)].join("/"), await fetchGrooveBlob(groove));
+  zip.file([folder, "metadata.json"].join("/"), JSON.stringify({
+    appName: "GroovyDrummer",
+    grooveId: groove.id,
+    packName: groove.packName,
+    tempoLabel: groove.tempoLabel,
+    categoryName: groove.categoryName,
+    grooveName: groove.grooveName,
+    renderedTempo: tempo,
+    sourcePath: groove.sourcePath,
+    stems: stems.map((stem) => stem.fileName),
+  }, null, 2));
+}
+
+function formatTempo(value: number) {
+  return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(3)));
 }
 
 function saveBlob(blob: Blob, fileName: string) {

@@ -1,4 +1,23 @@
 export type DrumGroup = "kick" | "snare" | "hat" | "tom" | "ride" | "crash";
+export type PreviewEngineMode = "home-kit" | "synthetic";
+export type AudioExportKind = "midi" | "mix-wav" | "stems-zip";
+export type SampleMic = "close" | "overheads" | "room";
+export type SampleArticulation =
+  | "kick"
+  | "snare"
+  | "snare-rim"
+  | "snare-crossstick"
+  | "floor-tom"
+  | "rack-tom"
+  | "hat-closed"
+  | "hat-open"
+  | "hat-pedal"
+  | "ride-bow"
+  | "ride-bell"
+  | "ride-crash"
+  | "crash-left"
+  | "crash-right"
+  | "stick-click";
 
 export interface DrumMapHit {
   note: number;
@@ -14,6 +33,20 @@ export interface PatternMap {
   tom: number[];
   ride: number[];
   crash: number[];
+}
+
+export interface SampleLayer {
+  velocity: number;
+  path: string;
+}
+
+export interface SampleManifest {
+  id: "home-kit-balanced";
+  name: string;
+  root: string;
+  sampleRate: number;
+  bitDepth: number;
+  layers: Record<SampleArticulation, Partial<Record<SampleMic, SampleLayer[]>>>;
 }
 
 export interface Groove {
