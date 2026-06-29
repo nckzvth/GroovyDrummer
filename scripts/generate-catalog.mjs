@@ -1,33 +1,18 @@
 import midiPackage from "@tonejs/midi";
+import { execFile } from "node:child_process";
 import { copyFile, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const publicDir = path.join(rootDir, "public");
 const midiOutDir = path.join(publicDir, "midi");
 const catalogPath = path.join(publicDir, "catalog.json");
+const archiveDirName = "800000_Drum_Percussion_MIDI_Archive[6_19_15]";
+const execFileAsync = promisify(execFile);
 const { Midi } = midiPackage;
-
-const gmMap = [
-  { note: 36, noteName: "C1", name: "Kick Hit", group: "kick" },
-  { note: 38, noteName: "D1", name: "Snare Hit", group: "snare" },
-  { note: 50, noteName: "D2", name: "Rack Tom 1 Hit", group: "tom" },
-  { note: 43, noteName: "G1", name: "Rack Tom 2 Hit", group: "tom" },
-  { note: 48, noteName: "C2", name: "Floor Tom 1 Hit", group: "tom" },
-  { note: 41, noteName: "F1", name: "Floor Tom 2 Hit", group: "tom" },
-  { note: 42, noteName: "F#1", name: "Hi-Hat Tip Tight", group: "hat" },
-  { note: 54, noteName: "F#2", name: "Hi-Hat Tip Closed", group: "hat" },
-  { note: 46, noteName: "A#1", name: "Hi-Hat Open 2", group: "hat" },
-  { note: 58, noteName: "A#2", name: "Hi-Hat Open 3", group: "hat" },
-  { note: 44, noteName: "G#1", name: "Hi-Hat Pedal", group: "hat" },
-  { note: 53, noteName: "F2", name: "Ride Bell", group: "ride" },
-  { note: 51, noteName: "D#2", name: "Ride Cymbal", group: "ride" },
-  { note: 49, noteName: "C#2", name: "Main Crash Left Hit", group: "crash" },
-  { note: 57, noteName: "A2", name: "Main Crash Right Hit", group: "crash" },
-  { note: 52, noteName: "E2", name: "China Hit", group: "crash" },
-  { note: 55, noteName: "G2", name: "Splash Hit", group: "crash" },
-];
+const gmMap = JSON.parse(await readFile(path.join(rootDir, "src", "drum-map.json"), "utf8"));
 
 const gmGroups = new Map(gmMap.map((hit) => [hit.note, hit.group]));
 const patternGroups = ["kick", "snare", "hat", "tom", "ride", "crash"];
@@ -58,6 +43,101 @@ function parseTempo(folderName) {
   };
 }
 
+function tempoFromBpm(bpm) {
+  return {
+    id: bpm ? `${bpm}-bpm` : "unknown-bpm",
+    label: bpm ? `${bpm} BPM` : "Unknown BPM",
+    range: bpm ? [bpm, bpm] : null,
+    bpm,
+    sort: bpm ?? 0,
+  };
+}
+
+function parseArchiveTempo(parts, fileName) {
+  const text = [...parts, fileName].join(" ");
+  const bpmMatch = [...text.matchAll(/(?:^|[^0-9])(\d{2,3})\s*bpm\b/gi)]
+    .map((match) => Number(match[1]))
+    .find((value) => value >= 40 && value <= 320);
+
+  if (bpmMatch) {
+    return tempoFromBpm(bpmMatch);
+  }
+
+  const baseName = path.basename(fileName, path.extname(fileName));
+  const leadingTempo = Number(baseName.match(/^(\d{2,3})(?=\D)/)?.[1] ?? 0);
+  return tempoFromBpm(leadingTempo >= 40 && leadingTempo <= 320 ? leadingTempo : null);
+}
+
+function prettyArchiveSegment(value) {
+  return value
+    .replace(/\[[^\]]+\]/g, "")
+    .replace(/\.(sng|prt|lib)$/i, "")
+    .replace(/^\d+@/, "")
+    .replace(/^\d+\s*-\s*/, "")
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function stripTempo(value) {
+  const pretty = prettyArchiveSegment(value);
+  return pretty.replace(/\b\d{2,3}\s*bpm\b/gi, "").replace(/\s+/g, " ").trim() || pretty;
+}
+
+function stripGmFamily(value) {
+  return prettyArchiveSegment(value)
+    .replace(/^GM\s*-\s*/i, "")
+    .trim();
+}
+
+function stripGmKit(value) {
+  return stripGmFamily(value)
+    .replace(/^Punk\s*/i, "")
+    .replace(/^Rock 1\s*/i, "")
+    .trim();
+}
+
+function compactCategory(parts) {
+  const [collection = "", family = "", kit = "", mode = ""] = parts;
+
+  if (/^GM MIDI Pack/i.test(collection)) {
+    return [
+      "GM MIDI",
+      stripGmFamily(family),
+      stripGmKit(kit),
+      stripTempo(mode),
+    ].filter(Boolean).join(" / ");
+  }
+
+  if (/Studio Drummer/i.test(collection)) {
+    return ["Studio Drummer", stripTempo(family)].filter(Boolean).join(" / ");
+  }
+
+  if (/80.+Drummer/i.test(collection)) {
+    return ["80s Drummer", stripTempo(family), stripTempo(kit)].filter(Boolean).join(" / ");
+  }
+
+  if (/Superior Drummer/i.test(collection)) {
+    return ["Superior Drummer 2", stripTempo(family), stripTempo(kit)].filter(Boolean).join(" / ");
+  }
+
+  return parts.map(stripTempo).filter(Boolean).slice(0, 4).join(" / ") || "Punk";
+}
+
+function stableHash(value) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function parseMeter(value) {
+  const match = value.match(/(?:^|\D)(\d+)[-_](\d+)(?:\D|$)/);
+  return match ? `${match[1]}/${match[2]}` : null;
+}
+
 async function listMidiFiles(dir) {
   const entries = await readdir(dir, { withFileTypes: true });
   const files = [];
@@ -74,13 +154,38 @@ async function listMidiFiles(dir) {
   return files;
 }
 
+async function listArchivePunkMidiFiles(archiveDir) {
+  const { stdout } = await execFileAsync("find", [
+    archiveDir,
+    "-type",
+    "f",
+    "(",
+    "-iname",
+    "*.mid",
+    "-o",
+    "-iname",
+    "*.midi",
+    ")",
+    "-ipath",
+    "*punk*",
+  ], { maxBuffer: 64 * 1024 * 1024 });
+
+  return stdout
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
+}
+
 function makePattern(notes, duration) {
   const bins = 32;
   const lanes = Object.fromEntries(patternGroups.map((group) => [group, Array(bins).fill(0)]));
   const safeDuration = Math.max(duration, 0.25);
 
   for (const note of notes) {
-    const group = gmGroups.get(note.midi) ?? "tom";
+    const group = gmGroups.get(note.midi);
+    if (!group) {
+      continue;
+    }
     const bin = Math.max(0, Math.min(bins - 1, Math.floor((note.time / safeDuration) * bins)));
     lanes[group][bin] = Math.min(1, Math.max(lanes[group][bin], note.velocity || 0.65));
   }
@@ -93,7 +198,10 @@ function summarizeHits(notes) {
   const usedNotes = new Set();
 
   for (const note of notes) {
-    const group = gmGroups.get(note.midi) ?? "tom";
+    const group = gmGroups.get(note.midi);
+    if (!group) {
+      continue;
+    }
     counts[group] += 1;
     usedNotes.add(note.midi);
   }
@@ -119,10 +227,19 @@ async function main() {
   await mkdir(midiOutDir, { recursive: true });
 
   const grooves = [];
+  const packNames = new Map();
+  const archiveCategorySorts = new Map();
+  const archiveCategorySort = (categoryName) => {
+    if (!archiveCategorySorts.has(categoryName)) {
+      archiveCategorySorts.set(categoryName, archiveCategorySorts.size + 1);
+    }
+    return archiveCategorySorts.get(categoryName);
+  };
 
   for (const packDirName of packDirs) {
     const packName = packDirName.replace(/\s*\(JJ Groove Packs\)$/, "");
     const packId = slug(packName);
+    packNames.set(packId, packName);
     const packDir = path.join(rootDir, packDirName);
     const midiFiles = await listMidiFiles(packDir);
 
@@ -181,6 +298,80 @@ async function main() {
     }
   }
 
+  const archiveDir = path.join(rootDir, archiveDirName);
+  try {
+    await stat(archiveDir);
+    const packId = "punk-archive";
+    const packName = "Punk Archive";
+    const midiFiles = await listArchivePunkMidiFiles(archiveDir);
+    packNames.set(packId, packName);
+
+    for (const midiPath of midiFiles) {
+      const relativeSourcePath = path.relative(rootDir, midiPath);
+      const relativeParts = path.relative(archiveDir, midiPath).split(path.sep);
+      const fileName = relativeParts.at(-1);
+      const dirParts = relativeParts.slice(0, -1);
+
+      if (!fileName || !dirParts.length) {
+        continue;
+      }
+
+      const tempo = parseArchiveTempo(dirParts, fileName);
+      const categoryName = compactCategory(dirParts);
+      const categorySort = 1000 + archiveCategorySort(categoryName);
+      const categoryId = slug(categoryName);
+      const grooveName = prettyArchiveSegment(path.basename(fileName, path.extname(fileName)));
+      const grooveNumber = Number(grooveName.match(/^(\d+)/)?.[1] ?? grooveName.match(/(\d+)/)?.[1] ?? 0);
+      const sourceHash = stableHash(relativeSourcePath);
+      const destinationPath = path.join(
+        midiOutDir,
+        packId,
+        categoryId,
+        tempo.id,
+        `${slug(grooveName)}-${sourceHash}.mid`,
+      );
+      const assetPath = path.relative(publicDir, destinationPath).split(path.sep).join("/");
+
+      await mkdir(path.dirname(destinationPath), { recursive: true });
+      await copyFile(midiPath, destinationPath);
+
+      const [bytes, buffer] = await Promise.all([stat(midiPath), readFile(midiPath)]);
+      const midi = new Midi(buffer);
+      const notes = midi.tracks.flatMap((track) => track.notes);
+      const duration = midi.duration || notes.reduce((max, note) => Math.max(max, note.time + note.duration), 0);
+      const hits = summarizeHits(notes);
+
+      grooves.push({
+        id: `${packId}/${categoryId}/${tempo.id}/${slug(grooveName)}-${sourceHash}`,
+        packId,
+        packName,
+        tempoId: tempo.id,
+        tempoLabel: tempo.label,
+        tempoRange: tempo.range,
+        tempoSort: tempo.sort,
+        bpm: tempo.bpm,
+        categoryId,
+        categoryName,
+        categorySort,
+        grooveName,
+        grooveNumber,
+        meter: parseMeter(`${dirParts.join(" ")} ${grooveName}`),
+        sourcePath: relativeSourcePath.split(path.sep).join("/"),
+        assetPath,
+        size: bytes.size,
+        duration: Number(duration.toFixed(3)),
+        noteCount: notes.length,
+        hitCounts: hits.counts,
+        usedNotes: hits.notes,
+        pattern: makePattern(notes, duration),
+      });
+    }
+  } catch (error) {
+    if (error?.code !== "ENOENT") {
+      throw error;
+    }
+  }
+
   grooves.sort((a, b) =>
     a.packName.localeCompare(b.packName) ||
     (b.tempoRange?.[0] ?? 0) - (a.tempoRange?.[0] ?? 0) ||
@@ -189,9 +380,7 @@ async function main() {
     a.grooveName.localeCompare(b.grooveName),
   );
 
-  const packs = packDirs.map((packDirName) => {
-    const packName = packDirName.replace(/\s*\(JJ Groove Packs\)$/, "");
-    const packId = slug(packName);
+  const packs = [...packNames.entries()].map(([packId, packName]) => {
     const packGrooves = grooves.filter((groove) => groove.packId === packId);
     const tempos = [...new Map(packGrooves.map((groove) => [groove.tempoId, {
       id: groove.tempoId,

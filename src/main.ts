@@ -44,10 +44,12 @@ const app = appRoot;
 const engine = new DrumPreviewEngine();
 const drumGroups: DrumGroup[] = ["kick", "snare", "hat", "tom", "ride", "crash"];
 const icons = { Archive, Check, Download, FolderDown, Play, RotateCcw, Search, Square, Trash2, Volume2, X };
+const maxRenderedRows = 700;
 
 let catalog: Catalog;
 let state: State;
 let filteredGrooves: Groove[] = [];
+let displayedGrooves: Groove[] = [];
 
 engine.onStop = () => {
   state.playingId = null;
@@ -300,7 +302,7 @@ function bindEvents() {
 
   byId<HTMLInputElement>("selectVisibleInput").addEventListener("change", (event) => {
     const checked = (event.currentTarget as HTMLInputElement).checked;
-    for (const groove of filteredGrooves) {
+    for (const groove of displayedGrooves) {
       if (checked) {
         state.selectedIds.add(groove.id);
       } else {
@@ -399,9 +401,15 @@ function segmentButton(id: string, label: string, count: number, activeId: strin
 
 function renderRows() {
   const rows = byId("rows");
+  displayedGrooves = filteredGrooves.slice(0, maxRenderedRows);
+  const isLimited = displayedGrooves.length < filteredGrooves.length;
 
-  rows.innerHTML = filteredGrooves.length
-    ? filteredGrooves.map(rowHtml).join("")
+  rows.innerHTML = displayedGrooves.length
+    ? `${displayedGrooves.map(rowHtml).join("")}${
+        isLimited
+          ? `<div class="limit-state">Showing ${displayedGrooves.length} of ${filteredGrooves.length}. Narrow the pack to see more.</div>`
+          : ""
+      }`
     : `<div class="empty-state">No grooves</div>`;
 
   updateSelectVisibleInput();
@@ -540,8 +548,8 @@ function setExportButtons(enabled: boolean) {
 
 function updateSelectVisibleInput() {
   const input = byId<HTMLInputElement>("selectVisibleInput");
-  const visibleCount = filteredGrooves.length;
-  const selectedVisible = filteredGrooves.filter((groove) => state.selectedIds.has(groove.id)).length;
+  const visibleCount = displayedGrooves.length;
+  const selectedVisible = displayedGrooves.filter((groove) => state.selectedIds.has(groove.id)).length;
   input.checked = visibleCount > 0 && selectedVisible === visibleCount;
   input.indeterminate = selectedVisible > 0 && selectedVisible < visibleCount;
 }

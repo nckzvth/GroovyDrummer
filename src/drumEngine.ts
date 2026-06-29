@@ -1,5 +1,6 @@
 import { Midi } from "@tonejs/midi";
 import * as Tone from "tone";
+import { drumGroupForNote, isOpenHatNote, isRideBellNote } from "./drumMap";
 import type { Groove } from "./types";
 
 type MidiInstance = InstanceType<typeof Midi>;
@@ -87,9 +88,11 @@ export class DrumPreviewEngine {
       return;
     }
 
-    this.stop(false);
+    this.clearTransport();
 
-    const notes = midi.tracks.flatMap((track) => track.notes);
+    const notes = midi.tracks
+      .flatMap((track) => track.notes)
+      .filter((note) => drumGroupForNote(note.midi) !== null);
     const originalTempo = midi.header.tempos[0]?.bpm ?? groove.bpm ?? 120;
     const tempo = tempoOverride ?? originalTempo;
     if (tempo <= 0) {
@@ -123,13 +126,17 @@ export class DrumPreviewEngine {
 
   stop(emit = true) {
     this.playbackToken += 1;
-    Tone.Transport.stop();
-    Tone.Transport.cancel(0);
-    Tone.Transport.loop = false;
+    this.clearTransport();
 
     if (emit) {
       this.onStop?.();
     }
+  }
+
+  private clearTransport() {
+    Tone.Transport.stop();
+    Tone.Transport.cancel(0);
+    Tone.Transport.loop = false;
   }
 
   setVolume(db: number) {
@@ -160,46 +167,45 @@ export class DrumPreviewEngine {
   private trigger(noteNumber: number, time: number, velocity: number) {
     const v = Math.max(0.08, Math.min(1, velocity));
     const kit = kitSettings[this.kit];
+    const group = drumGroupForNote(noteNumber);
 
-    switch (noteNumber) {
-      case 36:
+    if (!group) {
+      return;
+    }
+
+    switch (group) {
+      case "kick":
         this.kick.triggerAttackRelease("C1", 0.12, time, v);
         break;
-      case 38:
-        this.snareBody.triggerAttackRelease("D2", 0.08, time, v * 0.55 * kit.snare);
-        this.snareNoise.triggerAttackRelease(0.08, time, v * kit.snare);
+      case "snare": {
+        const rimScale = [27, 37, 39].includes(noteNumber) ? 0.72 : 1;
+        this.snareBody.triggerAttackRelease("D2", 0.08, time, v * 0.55 * kit.snare * rimScale);
+        this.snareNoise.triggerAttackRelease(0.08, time, v * kit.snare * rimScale);
         break;
-      case 42:
-      case 44:
-      case 54:
-        this.hatClosed.triggerAttackRelease(0.028, time, v * kit.hat);
+      }
+      case "hat":
+        if (isOpenHatNote(noteNumber)) {
+          this.hatOpen.triggerAttackRelease(0.22, time, v * kit.hat);
+        } else {
+          this.hatClosed.triggerAttackRelease(0.028, time, v * kit.hat);
+        }
         break;
-      case 46:
-      case 58:
-        this.hatOpen.triggerAttackRelease(0.22, time, v * kit.hat);
+      case "tom":
+        if (noteNumber >= 47) {
+          this.tomRack.triggerAttackRelease(noteNumber >= 50 ? "D2" : "C2", 0.15, time, v * kit.tom);
+        } else {
+          this.tomFloor.triggerAttackRelease(noteNumber <= 41 ? "F1" : "G1", 0.2, time, v * kit.tom);
+        }
         break;
-      case 50:
-      case 48:
-        this.tomRack.triggerAttackRelease(noteNumber === 50 ? "D2" : "C2", 0.15, time, v * kit.tom);
+      case "ride":
+        if (isRideBellNote(noteNumber)) {
+          this.rideBell.triggerAttackRelease("G5", 0.08, time, v * 0.55);
+        } else {
+          this.cymbal.triggerAttackRelease(0.42, time, v * 0.44 * kit.cymbal);
+        }
         break;
-      case 43:
-      case 41:
-        this.tomFloor.triggerAttackRelease(noteNumber === 43 ? "G1" : "F1", 0.2, time, v * kit.tom);
-        break;
-      case 53:
-        this.rideBell.triggerAttackRelease("G5", 0.08, time, v * 0.55);
-        break;
-      case 51:
-        this.cymbal.triggerAttackRelease(0.42, time, v * 0.44 * kit.cymbal);
-        break;
-      case 49:
-      case 52:
-      case 55:
-      case 57:
+      case "crash":
         this.cymbal.triggerAttackRelease(0.64, time, v * 0.68 * kit.cymbal);
-        break;
-      default:
-        this.tomRack.triggerAttackRelease("A1", 0.09, time, v * 0.45);
         break;
     }
   }

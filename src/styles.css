@@ -553,6 +553,14 @@ h1 {
   color: var(--muted);
 }
 
+.limit-state {
+  padding: 14px 16px 18px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+
 .fatal {
   min-height: 100vh;
 }
