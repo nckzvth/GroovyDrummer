@@ -68,6 +68,90 @@ const addictiveDrumsGroups = new Map([
   [93, "crash"],
 ]);
 const patternGroups = ["kick", "snare", "hat", "tom", "ride", "crash"];
+const groovyDrummerPackId = "groovy-drummer";
+const groovyDrummerPackName = "GroovyDrummer";
+
+const drumNotes = {
+  kick: 36,
+  snare: 38,
+  snareAlt: 40,
+  hatClosed: 42,
+  hatPedal: 44,
+  hatOpen: 46,
+  crashLeft: 49,
+  crashRight: 57,
+  ride: 51,
+  rideBell: 53,
+  floorTom: 43,
+  lowFloorTom: 41,
+  rackTom: 48,
+  highTom: 50,
+};
+
+const groovyDrummerCategoryOrder = new Map([
+  ["Main Grooves", 1],
+  ["Backbeats", 2],
+  ["Blast Beats", 3],
+  ["Fills", 4],
+  ["Intros / Stops", 5],
+]);
+
+const groovyDrummerFamilies = [
+  {
+    name: "Chain Sprint",
+    bpm: 232,
+    surface: "hatClosed",
+    blastStyle: "alternating",
+    mainA: { kicks: [0, 0.75, 1.5, 2, 2.75, 3.5], snares: [1, 3] },
+    mainB: { kicks: [0, 0.5, 1.5, 2.25, 2.75, 3.5], snares: [1, 2.5, 3] },
+    backbeat: { kicks: [0, 0.5, 1.75, 2.25, 3.5], snares: [1, 3] },
+  },
+  {
+    name: "D-Beat Battery",
+    bpm: 220,
+    surface: "ride",
+    blastStyle: "skank",
+    mainA: { kicks: [0, 0.75, 2, 2.75], snares: [1.5, 3] },
+    mainB: { kicks: [0, 0.5, 1.75, 2.5, 3.25], snares: [1.5, 3] },
+    backbeat: { kicks: [0, 0.75, 1.75, 2.25, 3.25], snares: [1, 3] },
+  },
+  {
+    name: "Skank Collapse",
+    bpm: 244,
+    surface: "hatClosed",
+    blastStyle: "hammer",
+    mainA: { kicks: [0, 0.5, 2, 2.5], snares: [1, 3] },
+    mainB: { kicks: [0, 0.5, 1.5, 2, 2.75, 3.5], snares: [1, 3] },
+    backbeat: { kicks: [0, 1.75, 2, 2.5, 3.5], snares: [1, 3] },
+  },
+  {
+    name: "Powerviolence Chop",
+    bpm: 265,
+    surface: "ride",
+    blastStyle: "bomb",
+    mainA: { kicks: [0, 0.25, 0.75, 2, 2.25, 3.5], snares: [1, 3] },
+    mainB: { kicks: [0, 0.25, 1.25, 2, 2.25, 2.75, 3.5], snares: [1, 2.5, 3] },
+    backbeat: { kicks: [0, 0.5, 1.5, 2, 2.25, 3.5], snares: [1, 3] },
+  },
+  {
+    name: "Grind Throttle",
+    bpm: 280,
+    surface: "ride",
+    blastStyle: "alternating",
+    mainA: { kicks: [0, 0.5, 1.25, 2, 2.5, 3.25], snares: [1, 3] },
+    mainB: { kicks: [0, 0.25, 0.75, 1.5, 2, 2.5, 3.25], snares: [1, 2, 3] },
+    backbeat: { kicks: [0, 0.5, 1.75, 2.25, 3.25], snares: [1, 3] },
+  },
+  {
+    name: "Two-Step Knife",
+    bpm: 205,
+    surface: "hatClosed",
+    blastStyle: "skank",
+    mainA: { kicks: [0, 0.5, 2, 2.5, 3.5], snares: [1, 3] },
+    mainB: { kicks: [0, 0.75, 1.75, 2, 2.5, 3.5], snares: [1, 3] },
+    backbeat: { kicks: [0, 0.5, 2, 2.75], snares: [1, 3] },
+  },
+];
 
 function slug(value) {
   return value
@@ -103,6 +187,224 @@ function tempoFromBpm(bpm) {
     bpm,
     sort: bpm ?? 0,
   };
+}
+
+function groovyDrummerCategorySort(categoryName) {
+  return groovyDrummerCategoryOrder.get(categoryName) ?? 99;
+}
+
+function note(noteName, beat, velocity = 0.85, duration = 0.12) {
+  return {
+    note: drumNotes[noteName],
+    beat,
+    velocity,
+    duration,
+  };
+}
+
+function addPulse(events, startBeat, beats, step, noteName, accentEvery = 4, baseVelocity = 0.62) {
+  const steps = Math.round(beats / step);
+  for (let index = 0; index < steps; index += 1) {
+    const velocity = index % accentEvery === 0 ? Math.min(0.92, baseVelocity + 0.18) : baseVelocity;
+    events.push(note(noteName, startBeat + index * step, velocity, step));
+  }
+}
+
+function addCrash(events, beat, right = false, velocity = 0.94) {
+  events.push(note(right ? "crashRight" : "crashLeft", beat, velocity, 0.5));
+}
+
+function addBarGroove(events, barStart, pattern, surfaceNote, options = {}) {
+  const pulseStep = options.pulseStep ?? 0.25;
+  const pulseVelocity = options.pulseVelocity ?? (surfaceNote === "ride" ? 0.56 : 0.62);
+  addPulse(events, barStart, 4, pulseStep, surfaceNote, pulseStep === 0.25 ? 4 : 2, pulseVelocity);
+
+  for (const kickBeat of pattern.kicks) {
+    events.push(note("kick", barStart + kickBeat, kickBeat % 1 === 0 ? 0.98 : 0.86, 0.14));
+  }
+  for (const snareBeat of pattern.snares) {
+    events.push(note("snare", barStart + snareBeat, snareBeat % 1 === 0 ? 0.96 : 0.88, 0.14));
+  }
+
+  if (options.openHat) {
+    events.push(note("hatOpen", barStart + 3.5, 0.62, 0.28));
+  }
+  if (options.bell) {
+    events.push(note("rideBell", barStart + 1.5, 0.72, 0.18));
+  }
+}
+
+function buildMainGroove(family, variant) {
+  const events = [];
+  const pattern = variant === "A" ? family.mainA : family.mainB;
+  const alternateSurface = variant === "B" && family.surface === "hatClosed" ? "ride" : family.surface;
+
+  for (let bar = 0; bar < 2; bar += 1) {
+    const barStart = bar * 4;
+    addBarGroove(events, barStart, pattern, alternateSurface, {
+      openHat: variant === "B" && bar === 1,
+      bell: variant === "B" && alternateSurface === "ride" && bar === 1,
+    });
+    if (bar === 0) {
+      addCrash(events, barStart, false, 0.94);
+    }
+  }
+
+  return events;
+}
+
+function buildBackbeat(family) {
+  const events = [];
+  for (let bar = 0; bar < 2; bar += 1) {
+    addBarGroove(events, bar * 4, family.backbeat, family.surface, {
+      pulseStep: 0.5,
+      pulseVelocity: 0.68,
+      openHat: bar === 1,
+    });
+  }
+  addCrash(events, 0, false, 0.92);
+  return events;
+}
+
+function buildBlast(family) {
+  const events = [];
+  const surface = family.surface === "hatClosed" ? "hatClosed" : "ride";
+
+  for (let bar = 0; bar < 2; bar += 1) {
+    const barStart = bar * 4;
+    addCrash(events, barStart, bar === 1, 0.9);
+    addPulse(events, barStart, 4, 0.25, surface, 4, surface === "ride" ? 0.56 : 0.62);
+
+    for (let step = 0; step < 16; step += 1) {
+      const beat = barStart + step * 0.25;
+      if (family.blastStyle === "bomb") {
+        if (step % 2 === 0) {
+          events.push(note("kick", beat, 0.92, 0.12));
+          events.push(note("snare", beat, 0.9, 0.12));
+        } else if (step % 4 === 1) {
+          events.push(note("kick", beat, 0.76, 0.1));
+        }
+      } else if (family.blastStyle === "hammer") {
+        events.push(note(step % 2 === 0 ? "kick" : "snare", beat, step % 4 === 0 ? 0.94 : 0.82, 0.1));
+        if (step % 4 === 2) {
+          events.push(note("kick", beat, 0.72, 0.1));
+        }
+      } else if (family.blastStyle === "skank") {
+        if (step % 4 === 0) {
+          events.push(note("kick", beat, 0.94, 0.12));
+        } else if (step % 4 === 2) {
+          events.push(note("snare", beat, 0.92, 0.12));
+        } else if (step % 4 === 3) {
+          events.push(note("kick", beat, 0.7, 0.1));
+        }
+      } else {
+        events.push(note(step % 2 === 0 ? "kick" : "snare", beat, step % 4 === 0 ? 0.94 : 0.84, 0.1));
+      }
+    }
+  }
+
+  return events;
+}
+
+function buildFill(family, variant) {
+  const events = [];
+  events.push(note("kick", 0, 0.95, 0.12));
+  events.push(note("snare", 1, 0.9, 0.12));
+
+  if (variant === "Tom Run") {
+    const toms = ["snare", "rackTom", "rackTom", "floorTom", "floorTom", "lowFloorTom", "snare", "floorTom"];
+    for (let index = 0; index < toms.length; index += 1) {
+      events.push(note(toms[index], 2 + index * 0.25, index % 2 === 0 ? 0.88 : 0.78, 0.18));
+    }
+  } else {
+    for (let index = 0; index < 16; index += 1) {
+      const beat = index * 0.25;
+      if (index >= 4) {
+        const drum = index < 10 ? "snare" : index < 13 ? "rackTom" : "floorTom";
+        events.push(note(drum, beat, index % 4 === 0 ? 0.9 : 0.72, 0.13));
+      }
+      if ([6, 11, 14].includes(index)) {
+        events.push(note("kick", beat, 0.78, 0.1));
+      }
+    }
+  }
+
+  addCrash(events, 3.75, true, 0.94);
+  return events;
+}
+
+function buildIntro(family) {
+  const events = [];
+  addCrash(events, 0, false, 0.94);
+  events.push(note("kick", 0, 0.98, 0.18));
+  events.push(note("snare", 1.5, 0.9, 0.12));
+  events.push(note("kick", 2, 0.92, 0.14));
+  addCrash(events, 2, true, 0.82);
+
+  for (const beat of [3, 3.25, 3.5, 3.75]) {
+    events.push(note("snare", beat, beat === 3.75 ? 0.95 : 0.74, 0.12));
+  }
+  events.push(note("hatOpen", 3.5, 0.58, 0.25));
+  return events;
+}
+
+function buildGroovyDrummerBeatDefinitions() {
+  const definitions = [];
+
+  for (const family of groovyDrummerFamilies) {
+    definitions.push({
+      family: family.name,
+      categoryName: "Intros / Stops",
+      name: `${family.name} - Intro Stops`,
+      bpm: family.bpm,
+      bars: 1,
+      events: buildIntro(family),
+    });
+    definitions.push({
+      family: family.name,
+      categoryName: "Main Grooves",
+      name: `${family.name} - Main A`,
+      bpm: family.bpm,
+      bars: 2,
+      events: buildMainGroove(family, "A"),
+    });
+    definitions.push({
+      family: family.name,
+      categoryName: "Main Grooves",
+      name: `${family.name} - Main B`,
+      bpm: family.bpm,
+      bars: 2,
+      events: buildMainGroove(family, "B"),
+    });
+    definitions.push({
+      family: family.name,
+      categoryName: "Backbeats",
+      name: `${family.name} - Backbeat`,
+      bpm: family.bpm,
+      bars: 2,
+      events: buildBackbeat(family),
+    });
+    definitions.push({
+      family: family.name,
+      categoryName: "Blast Beats",
+      name: `${family.name} - Blast`,
+      bpm: family.bpm,
+      bars: 2,
+      events: buildBlast(family),
+    });
+    for (const fillVariant of ["Tom Run", "Snare Break"]) {
+      definitions.push({
+        family: family.name,
+        categoryName: "Fills",
+        name: `${family.name} - ${fillVariant}`,
+        bpm: family.bpm,
+        bars: 1,
+        events: buildFill(family, fillVariant),
+      });
+    }
+  }
+
+  return definitions;
 }
 
 function parseArchiveTempo(parts, fileName) {
@@ -312,6 +614,113 @@ function summarizeHits(notes, groups = gmGroups) {
   };
 }
 
+function midiBytesForGroovyDrummerBeat(definition) {
+  const midi = new Midi();
+  midi.header.setTempo(definition.bpm);
+
+  const track = midi.addTrack();
+  track.channel = 9;
+  track.name = definition.name;
+
+  const beatSeconds = 60 / definition.bpm;
+  const totalBeats = definition.bars * 4;
+  const lastBeat = Math.max(...definition.events.map((event) => event.beat));
+  const mergedEvents = mergeDrumEvents(definition.events);
+
+  for (const event of mergedEvents) {
+    const reachesEnd = Math.abs(event.beat - lastBeat) < 0.0001;
+    const durationBeats = reachesEnd
+      ? Math.max(0.01, totalBeats - event.beat)
+      : event.duration;
+
+    track.addNote({
+      midi: event.note,
+      time: event.beat * beatSeconds,
+      duration: Math.max(0.01, durationBeats * beatSeconds),
+      velocity: Math.max(0.02, Math.min(1, event.velocity)),
+    });
+  }
+
+  return midi.toArray();
+}
+
+function mergeDrumEvents(events) {
+  const merged = new Map();
+
+  for (const event of events) {
+    const key = `${event.note}:${event.beat.toFixed(4)}`;
+    const current = merged.get(key);
+
+    if (!current || event.velocity > current.velocity) {
+      merged.set(key, { ...event });
+    }
+  }
+
+  return [...merged.values()].sort((a, b) => a.beat - b.beat || a.note - b.note);
+}
+
+async function addGroovyDrummerGrooves(grooves, packNames) {
+  packNames.set(groovyDrummerPackId, groovyDrummerPackName);
+
+  const definitions = buildGroovyDrummerBeatDefinitions();
+
+  for (let index = 0; index < definitions.length; index += 1) {
+    const definition = definitions[index];
+    const tempo = tempoFromBpm(definition.bpm);
+    const categorySort = groovyDrummerCategorySort(definition.categoryName);
+    const categoryId = slug(definition.categoryName);
+    const grooveName = definition.name;
+    const destinationPath = path.join(
+      midiOutDir,
+      groovyDrummerPackId,
+      categoryId,
+      tempo.id,
+      `${slug(grooveName)}.mid`,
+    );
+    const assetPath = path.relative(publicDir, destinationPath).split(path.sep).join("/");
+    const midiBytes = midiBytesForGroovyDrummerBeat(definition);
+
+    await mkdir(path.dirname(destinationPath), { recursive: true });
+    await writeFile(destinationPath, midiBytes);
+
+    const midi = new Midi(midiBytes);
+    const notes = midi.tracks.flatMap((track) => track.notes);
+    const duration = midi.duration || notes.reduce((max, midiNote) => Math.max(max, midiNote.time + midiNote.duration), 0);
+    const hits = summarizeHits(notes);
+
+    grooves.push({
+      id: `${groovyDrummerPackId}/${categoryId}/${tempo.id}/${slug(grooveName)}`,
+      packId: groovyDrummerPackId,
+      packName: groovyDrummerPackName,
+      midiMap: "gm",
+      tempoId: tempo.id,
+      tempoLabel: tempo.label,
+      tempoRange: tempo.range,
+      tempoSort: tempo.sort,
+      bpm: tempo.bpm,
+      categoryId,
+      categoryName: definition.categoryName,
+      categorySort,
+      grooveName,
+      grooveNumber: index + 1,
+      meter: "4/4",
+      sourcePath: [
+        "GroovyDrummer Originals",
+        definition.family,
+        definition.categoryName,
+        `${grooveName}.mid`,
+      ].join("/"),
+      assetPath,
+      size: midiBytes.byteLength,
+      duration: Number(duration.toFixed(3)),
+      noteCount: notes.length,
+      hitCounts: hits.counts,
+      usedNotes: hits.notes,
+      pattern: makePattern(notes, duration),
+    });
+  }
+}
+
 async function main() {
   const rootEntries = await readdir(rootDir, { withFileTypes: true });
   const packDirs = rootEntries
@@ -328,6 +737,8 @@ async function main() {
 
   const grooves = [];
   const packNames = new Map();
+
+  await addGroovyDrummerGrooves(grooves, packNames);
 
   for (const packDirName of packDirs) {
     const packName = packDirName.replace(/\s*\(JJ Groove Packs\)$/, "");
