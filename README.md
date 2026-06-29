@@ -25,3 +25,7 @@ npm run build
 ```
 
 Generated browser assets are written to `dist/`. Generated catalog and copied MIDI files under `public/` are intentionally ignored because the build regenerates them.
+
+## Sample Credits
+
+The sampled preview kit uses `@teropa/drumkit`. Its code is MIT licensed, and its samples are credited in that package to DWSD's Deep House Drum kit on freesound.org under Creative Commons Attribution, plus cymbal and tom samples from Stomachache and Karman Lyne under Creative Commons 0.

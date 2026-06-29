@@ -4,6 +4,7 @@ import {
   Download,
   FolderDown,
   Play,
+  RotateCcw,
   Search,
   Square,
   Trash2,
@@ -11,7 +12,7 @@ import {
   X,
   createIcons,
 } from "lucide";
-import { DrumPreviewEngine, kitOptions } from "./drumEngine";
+import { DrumPreviewEngine, kitOptions, type KitId } from "./drumEngine";
 import {
   canSaveToDirectory,
   downloadGroove,
@@ -29,9 +30,13 @@ type State = {
   selectedIds: Set<string>;
   playingId: string | null;
   loop: boolean;
-  kitId: "studio" | "tight" | "room";
+  kitId: KitId;
+  previewTempo: number;
+  tempoDirty: boolean;
 };
 
+const minPreviewTempo = 40;
+const maxPreviewTempo = 280;
 const appRoot = document.querySelector<HTMLDivElement>("#app");
 if (!appRoot) {
   throw new Error("Missing app root");
@@ -40,7 +45,7 @@ const app = appRoot;
 
 const engine = new DrumPreviewEngine();
 const drumGroups: DrumGroup[] = ["kick", "snare", "hat", "tom", "ride", "crash"];
-const icons = { Archive, Check, Download, FolderDown, Play, Search, Square, Trash2, Volume2, X };
+const icons = { Archive, Check, Download, FolderDown, Play, RotateCcw, Search, Square, Trash2, Volume2, X };
 
 let catalog: Catalog;
 let state: State;
@@ -72,7 +77,9 @@ async function init() {
     selectedIds: new Set(),
     playingId: null,
     loop: true,
-    kitId: "studio",
+    kitId: "sampled",
+    previewTempo: initialTempoForPack(initialPack),
+    tempoDirty: false,
   };
 
   renderShell();
@@ -127,8 +134,18 @@ function renderShell() {
             </label>
             <label class="volume">
               <i data-lucide="volume-2"></i>
-              <input id="volumeInput" type="range" min="-24" max="0" step="1" value="-7" />
+              <input id="volumeInput" type="range" min="-24" max="0" step="1" value="-5" />
             </label>
+            <div class="tempo-control" role="group" aria-label="Preview tempo">
+              <span>Preview tempo <strong id="tempoMode">Auto</strong></span>
+              <div class="tempo-inputs">
+                <input id="tempoSlider" type="range" min="${minPreviewTempo}" max="${maxPreviewTempo}" step="1" value="${state.previewTempo}" />
+                <input id="tempoNumber" type="number" min="${minPreviewTempo}" max="${maxPreviewTempo}" step="1" value="${state.previewTempo}" aria-label="Preview tempo BPM" />
+                <button class="icon-button mini" id="tempoResetButton" type="button" title="Reset tempo" aria-label="Reset tempo">
+                  <i data-lucide="rotate-ccw"></i>
+                </button>
+              </div>
+            </div>
             <button class="icon-button" id="stopButton" type="button" title="Stop playback" aria-label="Stop playback">
               <i data-lucide="square"></i>
             </button>
@@ -219,9 +236,27 @@ function bindEvents() {
   });
 
   byId<HTMLSelectElement>("kitSelect").addEventListener("change", (event) => {
-    state.kitId = (event.currentTarget as HTMLSelectElement).value as State["kitId"];
+    state.kitId = (event.currentTarget as HTMLSelectElement).value as KitId;
     engine.setKit(state.kitId);
     byId<HTMLInputElement>("volumeInput").value = String(kitVolume(state.kitId));
+  });
+
+  byId<HTMLInputElement>("tempoSlider").addEventListener("input", (event) => {
+    setPreviewTempo(Number((event.currentTarget as HTMLInputElement).value), true);
+    restartPlayingGroove();
+  });
+
+  byId<HTMLInputElement>("tempoNumber").addEventListener("input", (event) => {
+    setPreviewTempo(Number((event.currentTarget as HTMLInputElement).value), true);
+    restartPlayingGroove();
+  });
+
+  byId("tempoResetButton").addEventListener("click", () => {
+    state.tempoDirty = false;
+    const groove = currentPlayingGroove();
+    state.previewTempo = groove ? effectivePreviewTempo(groove) : initialTempoForPack(state.packId);
+    syncTempoControls();
+    restartPlayingGroove();
   });
 
   byId<HTMLInputElement>("volumeInput").addEventListener("input", (event) => {
@@ -303,6 +338,7 @@ function renderAll() {
   renderCategoryTabs(pack);
   renderRows();
   renderSelection();
+  syncTempoControls();
   hydrateIcons();
 }
 
@@ -422,17 +458,36 @@ async function togglePlayback(groove: Groove) {
     return;
   }
 
+  await startPlayback(groove);
+}
+
+async function startPlayback(groove: Groove) {
+  const previewTempo = effectivePreviewTempo(groove);
+  if (!state.tempoDirty) {
+    state.previewTempo = previewTempo;
+    syncTempoControls();
+  }
+
   state.playingId = groove.id;
   renderRows();
-  setStatus(`Playing ${groove.grooveName}`);
+  setStatus(`Playing ${groove.grooveName} at ${previewTempo} BPM`);
 
   try {
-    await engine.play(groove, state.loop);
+    await engine.play(groove, state.loop, previewTempo);
   } catch (error) {
     state.playingId = null;
     renderRows();
     setStatus(error instanceof Error ? error.message : "Playback failed");
   }
+}
+
+function restartPlayingGroove() {
+  const groove = currentPlayingGroove();
+  if (!groove) {
+    return;
+  }
+
+  void startPlayback(groove);
 }
 
 async function runExportAction(grooves: Groove[], action: () => Promise<void>, doneMessage: string) {
@@ -500,6 +555,46 @@ function selectedGrooves() {
     a.grooveName.localeCompare(b.grooveName),
   );
   return selected;
+}
+
+function currentPlayingGroove() {
+  if (!state.playingId) {
+    return null;
+  }
+  return catalog.grooves.find((groove) => groove.id === state.playingId) ?? null;
+}
+
+function effectivePreviewTempo(groove: Groove) {
+  return state.tempoDirty ? state.previewTempo : clampTempo(groove.bpm ?? state.previewTempo);
+}
+
+function setPreviewTempo(value: number, dirty: boolean) {
+  state.previewTempo = clampTempo(value);
+  state.tempoDirty = dirty;
+  syncTempoControls();
+}
+
+function clampTempo(value: number) {
+  if (!Number.isFinite(value)) {
+    return 120;
+  }
+  return Math.max(minPreviewTempo, Math.min(maxPreviewTempo, Math.round(value)));
+}
+
+function syncTempoControls() {
+  const slider = document.getElementById("tempoSlider") as HTMLInputElement | null;
+  const number = document.getElementById("tempoNumber") as HTMLInputElement | null;
+  const mode = document.getElementById("tempoMode");
+
+  if (slider) {
+    slider.value = String(state.previewTempo);
+  }
+  if (number) {
+    number.value = String(state.previewTempo);
+  }
+  if (mode) {
+    mode.textContent = state.tempoDirty ? "Custom" : "Auto";
+  }
 }
 
 function getFilteredGrooves() {
@@ -580,6 +675,9 @@ function packFromHash(packs: PackSummary[]) {
 }
 
 function kitVolume(kitId: State["kitId"]) {
+  if (kitId === "sampled") {
+    return -5;
+  }
   if (kitId === "tight") {
     return -6;
   }
@@ -587,6 +685,11 @@ function kitVolume(kitId: State["kitId"]) {
     return -9;
   }
   return -7;
+}
+
+function initialTempoForPack(packId: string) {
+  const pack = catalog.packs.find((item) => item.id === packId);
+  return clampTempo(pack?.tempos[0]?.bpm ?? 120);
 }
 
 function setStatus(message: string) {
