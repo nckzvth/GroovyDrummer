@@ -74,6 +74,7 @@ export interface Groove {
   hitCounts: Record<DrumGroup, number>;
   usedNotes: number[];
   pattern: PatternMap;
+  midiData?: Uint8Array;
 }
 
 export interface TempoSummary {

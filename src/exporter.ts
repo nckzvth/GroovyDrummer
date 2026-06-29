@@ -54,6 +54,10 @@ export const fileNameForGroove = fileNameForGrooveMidi;
 export const outputPathForGroove = outputPathForGrooveMidi;
 
 export async function fetchGrooveBlob(groove: Groove) {
+  if (groove.midiData) {
+    return new Blob([new Uint8Array(groove.midiData)], { type: "audio/midi" });
+  }
+
   const response = await fetch(assetUrl(groove.assetPath));
   if (!response.ok) {
     throw new Error(`Unable to download ${groove.grooveName}`);

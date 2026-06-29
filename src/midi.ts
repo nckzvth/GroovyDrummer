@@ -23,6 +23,10 @@ export function assetUrl(assetPath: string) {
 }
 
 export async function loadGrooveMidi(groove: Groove) {
+  if (groove.midiData) {
+    return new Midi(new Uint8Array(groove.midiData).buffer);
+  }
+
   const cached = midiCache.get(groove.assetPath);
   if (cached) {
     return cached;

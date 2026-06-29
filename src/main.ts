@@ -1,7 +1,9 @@
 import {
   Archive,
   Check,
+  Eraser,
   Play,
+  Plus,
   RotateCcw,
   Search,
   Square,
@@ -10,6 +12,17 @@ import {
   X,
   createIcons,
 } from "lucide";
+import {
+  buildCustomGroove,
+  builderNoteOptions,
+  builderPackId,
+  builderStepCount,
+  createInitialBuilderState,
+  resizeBuilderCells,
+  type BuilderCellValue,
+  type BuilderLane,
+  type BuilderState,
+} from "./customGroove";
 import { DrumPreviewEngine, previewEngineOptions } from "./drumEngine";
 import {
   downloadGrooveMidi,
@@ -41,17 +54,19 @@ const app = appRoot;
 
 const engine = new DrumPreviewEngine();
 const drumGroups: DrumGroup[] = ["kick", "snare", "hat", "tom", "ride", "crash"];
-const icons = { Archive, Check, Play, RotateCcw, Search, Square, Trash2, Volume2, X };
+const icons = { Archive, Check, Eraser, Play, Plus, RotateCcw, Search, Square, Trash2, Volume2, X };
 const maxRenderedRows = 700;
+const builderPackName = "Part Builder";
 
 let catalog: Catalog;
 let state: State;
+let builderState: BuilderState = createInitialBuilderState();
 let filteredGrooves: Groove[] = [];
 let displayedGrooves: Groove[] = [];
 
 engine.onStop = () => {
   state.playingId = null;
-  renderRows();
+  renderPlaybackSurface();
   setStatus("Ready");
 };
 engine.onStatus = (message) => {
@@ -153,12 +168,12 @@ function renderShell() {
           </div>
         </header>
 
-        <section class="segments">
+        <section class="segments" id="segmentsPanel">
           <div class="segment-row" id="tempoTabs" aria-label="Tempo"></div>
           <div class="segment-row category" id="categoryTabs" aria-label="Category"></div>
         </section>
 
-        <section class="export-strip">
+        <section class="export-strip" id="exportStrip">
           <div class="selection-meter">
             <strong id="selectedCount">0 selected</strong>
             <span id="statusText">Ready</span>
@@ -182,7 +197,7 @@ function renderShell() {
           </div>
         </section>
 
-        <section class="groove-browser">
+        <section class="groove-browser" id="grooveBrowser">
           <div class="table-head">
             <label class="check-cell">
               <input id="selectVisibleInput" type="checkbox" />
@@ -195,6 +210,8 @@ function renderShell() {
           </div>
           <div class="rows" id="rows"></div>
         </section>
+
+        <section class="part-builder" id="builderPanel" hidden></section>
       </main>
     </div>
   `;
@@ -277,7 +294,7 @@ function bindEvents() {
   byId("stopButton").addEventListener("click", () => {
     state.playingId = null;
     engine.stop();
-    renderRows();
+    renderPlaybackSurface();
   });
 
   byId("rows").addEventListener("click", (event) => {
@@ -294,7 +311,7 @@ function bindEvents() {
       return;
     }
 
-    const groove = catalog.grooves.find((item) => item.id === button.dataset.id);
+    const groove = grooveById(button.dataset.id);
     if (!groove) {
       return;
     }
@@ -311,7 +328,7 @@ function bindEvents() {
       return;
     }
 
-    const groove = catalog.grooves.find((item) => item.id === select.dataset.exportId);
+    const groove = grooveById(select.dataset.exportId);
     const kind = select.value as AudioExportKind | "";
     select.value = "";
 
@@ -363,17 +380,52 @@ function bindEvents() {
       "ZIP ready",
     );
   });
+
+  byId("builderPanel").addEventListener("click", (event) => {
+    handleBuilderClick(event);
+  });
+
+  byId("builderPanel").addEventListener("input", (event) => {
+    handleBuilderInput(event);
+  });
+
+  byId("builderPanel").addEventListener("change", (event) => {
+    handleBuilderChange(event);
+  });
+
+  byId("builderPanel").addEventListener("focusout", (event) => {
+    handleBuilderFocusOut(event);
+  });
+
+  byId("builderPanel").addEventListener("keydown", (event) => {
+    handleBuilderKeydown(event);
+  });
 }
 
 function renderAll() {
   const pack = currentPack();
+  renderPackNav();
+
+  if (isBuilderPack()) {
+    renderBuilderPage();
+    return;
+  }
+
   normalizeFilters(pack);
   filteredGrooves = getFilteredGrooves();
+
+  byId("segmentsPanel").hidden = false;
+  byId("exportStrip").hidden = false;
+  byId("grooveBrowser").hidden = false;
+  byId("builderPanel").hidden = true;
+  const searchInput = byId<HTMLInputElement>("searchInput");
+  searchInput.disabled = false;
+  searchInput.placeholder = "Search grooves";
+  searchInput.value = state.query;
 
   byId("packTitle").textContent = pack.name;
   byId("packMeta").textContent = `${pack.count} grooves`;
 
-  renderPackNav();
   renderTempoTabs(pack);
   renderCategoryTabs(pack);
   renderRows();
@@ -383,7 +435,7 @@ function renderAll() {
 }
 
 function renderPackNav() {
-  byId("packNav").innerHTML = catalog.packs
+  byId("packNav").innerHTML = allPacks()
     .map((pack) => `
       <button class="pack-link ${pack.id === state.packId ? "active" : ""}" type="button" data-pack-id="${pack.id}">
         <span>${escapeHtml(shortPackName(pack.name))}</span>
@@ -391,6 +443,436 @@ function renderPackNav() {
       </button>
     `)
     .join("");
+}
+
+function renderBuilderPage() {
+  const groove = currentBuilderGroove();
+  filteredGrooves = [];
+  displayedGrooves = [];
+
+  if (!state.tempoDirty) {
+    state.previewTempo = builderState.tempo;
+  }
+
+  byId("segmentsPanel").hidden = true;
+  byId("exportStrip").hidden = true;
+  byId("grooveBrowser").hidden = true;
+  byId("builderPanel").hidden = false;
+
+  const searchInput = byId<HTMLInputElement>("searchInput");
+  searchInput.disabled = true;
+  searchInput.value = "";
+  searchInput.placeholder = "Part Builder";
+
+  byId("packTitle").textContent = builderPackName;
+  byId("packMeta").textContent = `${formatTempo(builderState.tempo)} BPM · ${builderState.bars} ${builderState.bars === 1 ? "bar" : "bars"} · ${groove.noteCount} hits`;
+  byId("builderPanel").innerHTML = builderHtml(groove);
+  syncTempoControls();
+  hydrateIcons();
+}
+
+function builderHtml(groove: Groove) {
+  const stepCount = builderStepCount(builderState);
+  const isPlaying = isBuilderPlaying();
+  const hits = compactHits(groove) || "No hits";
+  const status = document.getElementById("builderStatusText")?.textContent
+    ?? document.getElementById("statusText")?.textContent
+    ?? "Ready";
+
+  return `
+    <div class="builder-toolbar">
+      <label class="builder-field builder-title-field">
+        <span>Title</span>
+        <input type="text" data-builder-field="title" value="${escapeHtml(builderState.title)}" autocomplete="off" />
+      </label>
+      <label class="builder-field">
+        <span>Tempo</span>
+        <input type="text" inputmode="decimal" data-builder-field="tempo" value="${formatTempo(builderState.tempo)}" autocomplete="off" />
+      </label>
+      <label class="builder-field">
+        <span>Bars</span>
+        <select data-builder-field="bars">
+          ${[1, 2, 4, 8].map((bars) => `<option value="${bars}" ${builderState.bars === bars ? "selected" : ""}>${bars}</option>`).join("")}
+        </select>
+      </label>
+      <div class="builder-actions">
+        <button class="text-button" type="button" data-builder-action="play">
+          <i data-lucide="${isPlaying ? "square" : "play"}"></i>
+          <span>${isPlaying ? "Stop" : "Preview"}</span>
+        </button>
+        <button class="text-button" type="button" data-builder-action="midi">
+          <i data-lucide="archive"></i>
+          <span>MIDI</span>
+        </button>
+        <button class="text-button" type="button" data-builder-action="mix-wav">
+          <i data-lucide="archive"></i>
+          <span>Mix WAV</span>
+        </button>
+        <button class="text-button" type="button" data-builder-action="stems-zip">
+          <i data-lucide="archive"></i>
+          <span>Stems ZIP</span>
+        </button>
+        <button class="icon-button" type="button" data-builder-action="add-lane" title="Add lane" aria-label="Add lane">
+          <i data-lucide="plus"></i>
+        </button>
+        <button class="icon-button" type="button" data-builder-action="clear" title="Clear grid" aria-label="Clear grid">
+          <i data-lucide="eraser"></i>
+        </button>
+      </div>
+    </div>
+    <div class="builder-meter">
+      <strong>${escapeHtml(hits)}</strong>
+      <span>${stepCount} sixteenth-note steps</span>
+      <span class="builder-status" id="builderStatusText">${escapeHtml(status)}</span>
+      <div class="builder-legend" aria-label="Cell velocity legend">
+        <span><b class="legend-dot value-1"></b>Ghost</span>
+        <span><b class="legend-dot value-2"></b>Hit</span>
+        <span><b class="legend-dot value-3"></b>Accent</span>
+      </div>
+    </div>
+    <div class="builder-grid" style="--builder-steps:${stepCount}">
+      <div class="builder-grid-head">
+        <span>Lane</span>
+        <span>Map</span>
+        <span>Velocity</span>
+        <span>Accent</span>
+        <span></span>
+        <span>Steps</span>
+      </div>
+      <div class="builder-lanes">
+        ${builderState.lanes.map((lane) => builderLaneHtml(lane)).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function builderLaneHtml(lane: BuilderLane) {
+  const velocity = Math.round(lane.velocity * 127);
+  const accentVelocity = Math.round(lane.accentVelocity * 127);
+
+  return `
+    <div class="builder-lane" data-lane-id="${escapeHtml(lane.id)}">
+      <div class="builder-lane-name">
+        <strong>${escapeHtml(lane.label)}</strong>
+        <span>Note ${lane.note}</span>
+      </div>
+      <label class="builder-field inline">
+        <span>Map</span>
+        <select data-builder-lane-field="note" data-lane-id="${escapeHtml(lane.id)}" aria-label="Map ${escapeHtml(lane.label)}">
+          ${builderNoteOptions.map((option) => `
+            <option value="${option.note}" ${lane.note === option.note ? "selected" : ""}>${escapeHtml(option.label)} · ${option.note}</option>
+          `).join("")}
+        </select>
+      </label>
+      <label class="builder-range">
+        <span>Vel <output id="builder-velocity-${escapeHtml(lane.id)}">${velocity}</output></span>
+        <input type="range" min="1" max="127" step="1" value="${velocity}" data-builder-lane-field="velocity" data-lane-id="${escapeHtml(lane.id)}" />
+      </label>
+      <label class="builder-range">
+        <span>Acc <output id="builder-accentVelocity-${escapeHtml(lane.id)}">${accentVelocity}</output></span>
+        <input type="range" min="1" max="127" step="1" value="${accentVelocity}" data-builder-lane-field="accentVelocity" data-lane-id="${escapeHtml(lane.id)}" />
+      </label>
+      <button class="icon-button mini builder-delete" type="button" data-builder-action="delete-lane" data-lane-id="${escapeHtml(lane.id)}" title="Delete lane" aria-label="Delete ${escapeHtml(lane.label)} lane" ${builderState.lanes.length <= 1 ? "disabled" : ""}>
+        <i data-lucide="trash-2"></i>
+      </button>
+      <div class="builder-steps" aria-label="${escapeHtml(lane.label)} steps">
+        ${lane.cells.map((value, step) => builderCellHtml(lane, value, step)).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function builderCellHtml(lane: BuilderLane, value: BuilderCellValue, step: number) {
+  const classes = [
+    "builder-step",
+    `value-${value}`,
+    step % 16 === 0 ? "bar-start" : "",
+    step % 4 === 0 ? "beat-start" : "",
+  ].filter(Boolean).join(" ");
+  return `
+    <button class="${classes}" type="button" data-builder-cell data-lane-id="${escapeHtml(lane.id)}" data-step="${step}" aria-label="${escapeHtml(lane.label)} step ${step + 1}: ${builderCellLabel(value)}"></button>
+  `;
+}
+
+function builderCellLabel(value: BuilderCellValue) {
+  if (value === 1) {
+    return "ghost";
+  }
+  if (value === 2) {
+    return "hit";
+  }
+  if (value === 3) {
+    return "accent";
+  }
+  return "empty";
+}
+
+function handleBuilderClick(event: Event) {
+  const target = event.target as HTMLElement;
+  const cell = target.closest<HTMLButtonElement>("[data-builder-cell]");
+
+  if (cell) {
+    const lane = builderLaneById(cell.dataset.laneId);
+    const step = Number(cell.dataset.step);
+    if (!lane || !Number.isInteger(step) || step < 0 || step >= lane.cells.length) {
+      return;
+    }
+
+    lane.cells[step] = ((lane.cells[step] + 1) % 4) as BuilderCellValue;
+    markBuilderChanged();
+    renderBuilderPage();
+    return;
+  }
+
+  const button = target.closest<HTMLButtonElement>("button[data-builder-action]");
+  if (!button) {
+    return;
+  }
+
+  const action = button.dataset.builderAction;
+  if (action === "play") {
+    const groove = currentBuilderGroove();
+    if (isBuilderPlaying()) {
+      state.playingId = null;
+      engine.stop();
+      renderBuilderPage();
+    } else {
+      void startPlayback(groove);
+    }
+    return;
+  }
+
+  if (action === "clear") {
+    for (const lane of builderState.lanes) {
+      lane.cells = lane.cells.map(() => 0 as BuilderCellValue);
+    }
+    markBuilderChanged();
+    renderBuilderPage();
+    return;
+  }
+
+  if (action === "add-lane") {
+    addBuilderLane();
+    return;
+  }
+
+  if (action === "delete-lane") {
+    deleteBuilderLane(button.dataset.laneId);
+    return;
+  }
+
+  if (action === "midi" || action === "mix-wav" || action === "stems-zip") {
+    const groove = currentBuilderGroove();
+    const kind = action as AudioExportKind;
+    void runExportAction([groove], () => runSingleGrooveExport(groove, kind), singleExportMessage(groove, kind));
+  }
+}
+
+function handleBuilderInput(event: Event) {
+  const target = event.target as HTMLElement;
+  const input = target.closest<HTMLInputElement>("input[data-builder-field], input[data-builder-lane-field]");
+  if (!input) {
+    return;
+  }
+
+  const field = input.dataset.builderField;
+  if (field === "title") {
+    builderState.title = input.value;
+    builderState.revision += 1;
+    return;
+  }
+
+  if (field === "tempo") {
+    const tempo = parseTempoInput(input.value);
+    if (tempo === null) {
+      return;
+    }
+    builderState.tempo = tempo;
+    builderState.revision += 1;
+    if (!state.tempoDirty) {
+      state.previewTempo = tempo;
+      syncTempoControls();
+    }
+    stopBuilderPlaybackIfNeeded();
+    return;
+  }
+
+  const laneField = input.dataset.builderLaneField;
+  if (laneField !== "velocity" && laneField !== "accentVelocity") {
+    return;
+  }
+
+  const lane = builderLaneById(input.dataset.laneId);
+  const value = Number(input.value);
+  if (!lane || !Number.isFinite(value)) {
+    return;
+  }
+
+  lane[laneField] = Math.max(1, Math.min(127, value)) / 127;
+  builderState.revision += 1;
+  stopBuilderPlaybackIfNeeded();
+  const output = document.getElementById(`builder-${laneField}-${lane.id}`);
+  if (output) {
+    output.textContent = String(Math.round(lane[laneField] * 127));
+  }
+}
+
+function handleBuilderChange(event: Event) {
+  const target = event.target as HTMLElement;
+  const control = target.closest<HTMLInputElement | HTMLSelectElement>("[data-builder-field], [data-builder-lane-field]");
+  if (!control) {
+    return;
+  }
+
+  const field = control.dataset.builderField;
+  if (field === "tempo") {
+    const tempo = parseTempoInput((control as HTMLInputElement).value);
+    if (tempo === null) {
+      (control as HTMLInputElement).value = formatTempo(builderState.tempo);
+      setStatus("Tempo must be above 0 BPM");
+      return;
+    }
+
+    builderState.tempo = tempo;
+    builderState.revision += 1;
+    if (!state.tempoDirty) {
+      state.previewTempo = tempo;
+    }
+    stopBuilderPlaybackIfNeeded();
+    renderBuilderPage();
+    return;
+  }
+
+  if (field === "bars") {
+    const bars = Number((control as HTMLSelectElement).value);
+    if (![1, 2, 4, 8].includes(bars)) {
+      return;
+    }
+    resizeBuilderCells(builderState, bars);
+    stopBuilderPlaybackIfNeeded();
+    renderBuilderPage();
+    return;
+  }
+
+  const laneField = control.dataset.builderLaneField;
+  if (laneField === "note") {
+    const lane = builderLaneById(control.dataset.laneId);
+    const note = Number((control as HTMLSelectElement).value);
+    const option = builderNoteOptions.find((item) => item.note === note);
+    if (!lane || !option) {
+      return;
+    }
+
+    lane.note = option.note;
+    lane.label = option.label;
+    markBuilderChanged();
+    renderBuilderPage();
+  }
+}
+
+function handleBuilderFocusOut(event: FocusEvent) {
+  const target = event.target as HTMLElement;
+  const input = target.closest<HTMLInputElement>("input[data-builder-field='tempo']");
+  if (!input) {
+    return;
+  }
+  commitBuilderTempoInput(input);
+}
+
+function handleBuilderKeydown(event: KeyboardEvent) {
+  if (event.key !== "Enter") {
+    return;
+  }
+
+  const target = event.target as HTMLElement;
+  const input = target.closest<HTMLInputElement>("input[data-builder-field='tempo']");
+  if (!input) {
+    return;
+  }
+
+  event.preventDefault();
+  commitBuilderTempoInput(input);
+}
+
+function commitBuilderTempoInput(input: HTMLInputElement) {
+  const tempo = parseTempoInput(input.value);
+  if (tempo === null) {
+    input.value = formatTempo(builderState.tempo);
+    setStatus("Tempo must be above 0 BPM");
+    return;
+  }
+
+  builderState.tempo = tempo;
+  builderState.revision += 1;
+  if (!state.tempoDirty) {
+    state.previewTempo = tempo;
+  }
+  stopBuilderPlaybackIfNeeded();
+  renderBuilderPage();
+}
+
+function addBuilderLane() {
+  const stepCount = builderStepCount(builderState);
+  const usedNotes = new Set(builderState.lanes.map((lane) => lane.note));
+  const option = builderNoteOptions.find((item) => !usedNotes.has(item.note)) ?? builderNoteOptions[0];
+  const id = `lane-${Date.now().toString(36)}-${builderState.lanes.length}`;
+  builderState.lanes.push({
+    id,
+    label: option.label,
+    note: option.note,
+    velocity: 0.78,
+    accentVelocity: 0.94,
+    cells: Array<BuilderCellValue>(stepCount).fill(0),
+  });
+  markBuilderChanged();
+  renderBuilderPage();
+}
+
+function deleteBuilderLane(laneId: string | undefined) {
+  if (!laneId || builderState.lanes.length <= 1) {
+    return;
+  }
+
+  builderState.lanes = builderState.lanes.filter((lane) => lane.id !== laneId);
+  markBuilderChanged();
+  renderBuilderPage();
+}
+
+function builderLaneById(laneId: string | undefined) {
+  if (!laneId) {
+    return null;
+  }
+  return builderState.lanes.find((lane) => lane.id === laneId) ?? null;
+}
+
+function markBuilderChanged() {
+  builderState.revision += 1;
+  stopBuilderPlaybackIfNeeded();
+}
+
+function stopBuilderPlaybackIfNeeded() {
+  if (!isBuilderPlaying()) {
+    return;
+  }
+
+  state.playingId = null;
+  engine.stop(false);
+  setStatus("Ready");
+  updateBuilderPreviewButton();
+}
+
+function updateBuilderPreviewButton() {
+  const button = document.querySelector<HTMLButtonElement>("[data-builder-action='play']");
+  if (!button) {
+    return;
+  }
+
+  const isPlaying = isBuilderPlaying();
+  button.innerHTML = `
+    <i data-lucide="${isPlaying ? "square" : "play"}"></i>
+    <span>${isPlaying ? "Stop" : "Preview"}</span>
+  `;
+  hydrateIcons();
 }
 
 function renderTempoTabs(pack: PackSummary) {
@@ -503,7 +985,7 @@ async function togglePlayback(groove: Groove) {
   if (state.playingId === groove.id) {
     state.playingId = null;
     engine.stop();
-    renderRows();
+    renderPlaybackSurface();
     return;
   }
 
@@ -518,7 +1000,7 @@ async function startPlayback(groove: Groove) {
   }
 
   state.playingId = groove.id;
-  renderRows();
+  renderPlaybackSurface();
   setStatus(`Loading ${groove.grooveName}`);
 
   try {
@@ -528,7 +1010,7 @@ async function startPlayback(groove: Groove) {
     }
   } catch (error) {
     state.playingId = null;
-    renderRows();
+    renderPlaybackSurface();
     setStatus(error instanceof Error ? error.message : "Playback failed");
   }
 }
@@ -642,7 +1124,37 @@ function currentPlayingGroove() {
   if (!state.playingId) {
     return null;
   }
-  return catalog.grooves.find((groove) => groove.id === state.playingId) ?? null;
+  return grooveById(state.playingId);
+}
+
+function grooveById(id: string | undefined) {
+  if (!id) {
+    return null;
+  }
+  if (id.startsWith(`${builderPackId}/`)) {
+    return currentBuilderGroove();
+  }
+  return catalog.grooves.find((groove) => groove.id === id) ?? null;
+}
+
+function currentBuilderGroove() {
+  return buildCustomGroove(builderState);
+}
+
+function isBuilderPack() {
+  return state.packId === builderPackId;
+}
+
+function isBuilderPlaying() {
+  return state.playingId?.startsWith(`${builderPackId}/`) ?? false;
+}
+
+function renderPlaybackSurface() {
+  if (isBuilderPack()) {
+    renderBuilderPage();
+    return;
+  }
+  renderRows();
 }
 
 function effectivePreviewTempo(groove: Groove) {
@@ -724,15 +1236,47 @@ function getFilteredGrooves() {
 }
 
 function groovesForPack(packId: string) {
+  if (packId === builderPackId) {
+    return [currentBuilderGroove()];
+  }
   return catalog.grooves.filter((groove) => groove.packId === packId);
 }
 
 function currentPack() {
+  if (isBuilderPack()) {
+    return builderPackSummary();
+  }
   const pack = catalog.packs.find((item) => item.id === state.packId);
   if (!pack) {
     return catalog.packs[0];
   }
   return pack;
+}
+
+function allPacks() {
+  return [builderPackSummary(), ...catalog.packs];
+}
+
+function builderPackSummary(): PackSummary {
+  const tempo = builderState.tempo;
+  return {
+    id: builderPackId,
+    name: builderPackName,
+    count: 1,
+    tempos: [{
+      id: `${formatTempo(tempo)}-bpm`,
+      label: `${formatTempo(tempo)} BPM`,
+      range: [tempo, tempo],
+      bpm: tempo,
+      count: 1,
+    }],
+    categories: [{
+      id: "custom",
+      name: "Custom Parts",
+      sort: 1,
+      count: 1,
+    }],
+  };
 }
 
 function normalizeFilters(pack: PackSummary) {
@@ -771,6 +1315,9 @@ function formatDuration(seconds: number) {
 
 function packFromHash(packs: PackSummary[]) {
   const hash = window.location.hash.replace(/^#\/?/, "");
+  if (hash === builderPackId) {
+    return builderPackId;
+  }
   return packs.some((pack) => pack.id === hash) ? hash : null;
 }
 
@@ -782,12 +1329,22 @@ function kitVolume(previewMode: State["previewMode"]) {
 }
 
 function initialTempoForPack(packId: string) {
+  if (packId === builderPackId) {
+    return builderState.tempo;
+  }
   const pack = catalog.packs.find((item) => item.id === packId);
   return pack?.tempos[0]?.bpm ?? 120;
 }
 
 function setStatus(message: string) {
-  byId("statusText").textContent = message;
+  const statusText = document.getElementById("statusText");
+  const builderStatusText = document.getElementById("builderStatusText");
+  if (statusText) {
+    statusText.textContent = message;
+  }
+  if (builderStatusText) {
+    builderStatusText.textContent = message;
+  }
 }
 
 function hydrateIcons() {
