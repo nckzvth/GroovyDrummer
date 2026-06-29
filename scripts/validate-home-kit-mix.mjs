@@ -6,7 +6,7 @@ const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const manifest = JSON.parse(await readFile(path.join(rootDir, "public", "samples", "home-kit-balanced", "manifest.json"), "utf8"));
 const mixSource = await readFile(path.join(rootDir, "src", "homeKitMix.ts"), "utf8");
 const mix = parseMixSource(mixSource);
-const articulations = ["kick", "snare", "hat-closed", "ride-bow", "crash-left", "crash-right"];
+const articulations = ["kick", "snare", "hat-closed", "ride-bow", "ride-crash", "crash-left", "crash-right"];
 const report = {};
 const failures = [];
 
@@ -32,7 +32,7 @@ for (const articulation of articulations) {
   }
 }
 
-for (const articulation of ["hat-closed", "ride-bow", "crash-left", "crash-right"]) {
+for (const articulation of ["hat-closed", "ride-bow", "ride-crash", "crash-left", "crash-right"]) {
   const floor = articulation === "hat-closed" ? -40 : -36;
   if (report[articulation] < floor) {
     failures.push(`${articulation} estimated peak is too quiet at ${report[articulation]} dBFS.`);

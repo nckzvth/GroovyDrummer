@@ -14,7 +14,7 @@ export const homeKitArticulationLevels: Partial<Record<SampleArticulation, numbe
   "hat-pedal": 6,
   "ride-bow": 5,
   "ride-bell": 4,
-  "ride-crash": 3,
+  "ride-crash": 5,
   "crash-left": 4,
   "crash-right": 3,
   "stick-click": -6,

@@ -44,7 +44,7 @@ const noteArticulations = new Map<number, SampleArticulation>([
   [32, "ride-bow"],
   [51, "ride-bow"],
   [53, "ride-bell"],
-  [59, "ride-bow"],
+  [59, "ride-crash"],
   [78, "ride-bow"],
   [79, "ride-bell"],
   [84, "ride-bow"],

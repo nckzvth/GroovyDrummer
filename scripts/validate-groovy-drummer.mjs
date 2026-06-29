@@ -8,15 +8,15 @@ const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const catalog = JSON.parse(await readFile(path.join(rootDir, "public", "catalog.json"), "utf8"));
 const grooves = catalog.grooves.filter((groove) => groove.packId === "groovy-drummer");
 const expectedCategories = new Map([
-  ["Main Grooves", 12],
-  ["Backbeats", 6],
-  ["Blast Beats", 6],
-  ["Fills", 12],
-  ["Intros / Stops", 6],
+  ["Main Grooves", 16],
+  ["Backbeats", 8],
+  ["Blast Beats", 8],
+  ["Fills", 16],
+  ["Intros / Stops", 8],
 ]);
 
-if (grooves.length !== 42) {
-  throw new Error(`Expected 42 GroovyDrummer grooves, found ${grooves.length}.`);
+if (grooves.length !== 56) {
+  throw new Error(`Expected 56 GroovyDrummer grooves, found ${grooves.length}.`);
 }
 
 if (grooves.some((groove) => /skank collapse/i.test(groove.grooveName))) {
@@ -32,6 +32,8 @@ for (const [categoryName, count] of expectedCategories) {
 
 const signatures = new Map();
 const failures = [];
+let openHatGrooves = 0;
+let crashRideGrooves = 0;
 
 for (const groove of grooves) {
   const midiPath = path.join(rootDir, "public", groove.assetPath);
@@ -44,6 +46,13 @@ for (const groove of grooves) {
       velocity: note.velocity,
     })))
     .sort((a, b) => a.beat - b.beat || a.midi - b.midi);
+
+  if (beats.some((event) => event.midi === 46 || event.midi === 58)) {
+    openHatGrooves += 1;
+  }
+  if (beats.some((event) => event.midi === 59)) {
+    crashRideGrooves += 1;
+  }
 
   if (["Main Grooves", "Backbeats"].includes(groove.categoryName)) {
     const badKick = beats.find((event) => event.midi === 36 && !onGrid(event.beat, 0.5));
@@ -73,11 +82,18 @@ for (const groove of grooves) {
   }
 }
 
+if (openHatGrooves < 10) {
+  failures.push(`Expected at least 10 generated grooves with open hi-hat, found ${openHatGrooves}.`);
+}
+if (crashRideGrooves < 8) {
+  failures.push(`Expected at least 8 generated grooves with crash ride, found ${crashRideGrooves}.`);
+}
+
 if (failures.length) {
   throw new Error(failures.join("\n"));
 }
 
-console.log(`Validated ${grooves.length} GroovyDrummer grooves with unique generated part grids.`);
+console.log(`Validated ${grooves.length} GroovyDrummer grooves with unique generated part grids, ${openHatGrooves} open-hat grooves, and ${crashRideGrooves} crash-ride grooves.`);
 
 function patternSignature(events) {
   return events

@@ -81,6 +81,7 @@ const drumNotes = {
   crashLeft: 49,
   crashRight: 57,
   ride: 51,
+  rideCrash: 59,
   rideBell: 53,
   floorTom: 43,
   lowFloorTom: 41,
@@ -148,19 +149,85 @@ const groovyDrummerFamilies = [
     mainB: {
       bars: [
         { kicks: [0, 0.5, 1.5, 2, 2.5, 3.5], snares: [1, 3] },
-        { kicks: [0, 0.5, 2, 2.5, 3.5], snares: [1, 3], bellBeats: [3.5] },
+        { kicks: [0, 0.5, 2, 2.5, 3.5], snares: [1, 3], crashRideBeats: [0], bellBeats: [3.5] },
       ],
     },
     backbeat: {
       surface: "ride",
       bars: [
         { kicks: [0, 0.5, 1.5, 2, 2.5], snares: [1, 3] },
-        { kicks: [0, 0.5, 2, 2.5, 3.5], snares: [1, 3], bellBeats: [3.5] },
+        { kicks: [0, 0.5, 2, 2.5, 3.5], snares: [1, 3], crashRideBeats: [0], bellBeats: [3.5] },
       ],
     },
     fills: [
       { name: "Rack-To-Floor Fill", style: "rack-floor" },
       { name: "Crash Stop Fill", style: "crash-stop" },
+    ],
+  },
+  {
+    name: "Discharge Drive",
+    bpm: 165,
+    surface: "hatOpen",
+    mainPulseStep: 0.5,
+    surfaceVelocity: 0.86,
+    blastStyle: "dbeat-open",
+    introName: "Open-Hat Count",
+    introStyle: "open-hat-count",
+    mainA: {
+      bars: [
+        { kicks: [0, 0.5, 2, 2.5], snares: [1, 3], crashBeats: [0] },
+        { kicks: [0, 0.5, 1.5, 2, 2.5], snares: [1, 3], crashBeats: [0] },
+      ],
+    },
+    mainB: {
+      bars: [
+        { kicks: [0, 0.5, 1.5, 2, 2.5, 3.5], snares: [1, 3], crashBeats: [0] },
+        { kicks: [0, 0.5, 2, 2.5, 3.5], snares: [1, 3], crashBeats: [0, 3.5] },
+      ],
+    },
+    backbeat: {
+      surface: "hatOpen",
+      bars: [
+        { kicks: [0, 0.5, 2, 2.5], snares: [1, 3], crashBeats: [0] },
+        { kicks: [0, 0.5, 1.5, 2, 2.5], snares: [1, 3], crashBeats: [0] },
+      ],
+    },
+    fills: [
+      { name: "Open-Hat Turnaround", style: "open-hat-turnaround" },
+      { name: "D-Beat Snare Walk", style: "dbeat-snare-walk" },
+    ],
+  },
+  {
+    name: "Hardcore Stomp",
+    bpm: 185,
+    surface: "rideCrash",
+    mainPulseStep: 0.5,
+    surfaceVelocity: 0.84,
+    blastStyle: "hardcore",
+    introName: "Mosh Pickup",
+    introStyle: "mosh-pickup",
+    mainA: {
+      bars: [
+        { kicks: [0, 0.5, 2, 2.5], snares: [1, 3], crashRideBeats: [0, 2] },
+        { kicks: [0, 0.5, 1.5, 2, 3.5], snares: [1, 3], crashRideBeats: [0] },
+      ],
+    },
+    mainB: {
+      bars: [
+        { kicks: [0, 0.5, 2, 2.5, 3.5], snares: [1, 3], crashRideBeats: [0, 2] },
+        { kicks: [0, 0.5, 1.5, 2, 2.5, 3.5], snares: [1, 3], crashRideBeats: [0, 3] },
+      ],
+    },
+    backbeat: {
+      surface: "rideCrash",
+      bars: [
+        { kicks: [0, 0.5, 2, 2.5], snares: [1, 3], crashRideBeats: [0] },
+        { kicks: [0, 1.5, 2, 3.5], snares: [1, 3], crashRideBeats: [0, 2] },
+      ],
+    },
+    fills: [
+      { name: "Mosh Tom Walk", style: "mosh-tom-walk" },
+      { name: "Hardcore Stop Fill", style: "hardcore-stop" },
     ],
   },
   {
@@ -376,6 +443,9 @@ function addBarGroove(events, barStart, pattern, surfaceNote, options = {}) {
   for (const bellBeat of pattern.bellBeats ?? []) {
     events.push(note("rideBell", barStart + bellBeat, 0.82, 0.18));
   }
+  for (const crashRideBeat of pattern.crashRideBeats ?? []) {
+    events.push(note("rideCrash", barStart + crashRideBeat, 0.9, 0.45));
+  }
   for (const crashBeat of pattern.crashBeats ?? []) {
     addCrash(events, barStart + crashBeat, crashBeat >= 2, 0.9);
   }
@@ -414,12 +484,12 @@ function buildBackbeat(family) {
 
 function buildBlast(family) {
   const events = [];
-  const surface = family.surface === "hatClosed" ? "hatClosed" : "ride";
+  const surface = family.blastSurface ?? family.surface;
 
   for (let bar = 0; bar < 2; bar += 1) {
     const barStart = bar * 4;
     addCrash(events, barStart, bar === 1, 0.9);
-    addPulse(events, barStart, 4, 0.25, surface, 4, surface === "ride" ? 0.72 : 0.76);
+    addPulse(events, barStart, 4, 0.25, surface, 4, ["ride", "rideCrash"].includes(surface) ? 0.76 : 0.82);
 
     for (let step = 0; step < 16; step += 1) {
       const beat = barStart + step * 0.25;
@@ -458,6 +528,19 @@ function buildBlast(family) {
         if (step % 8 === 6) {
           events.push(note("kick", beat, 0.78, 0.1));
         }
+      } else if (family.blastStyle === "dbeat-open") {
+        if (step % 4 === 0) {
+          events.push(note("kick", beat, 0.94, 0.12));
+        }
+        if (step % 4 === 2) {
+          events.push(note("snare", beat, 0.92, 0.12));
+        }
+        if (step % 8 === 6) {
+          events.push(note("kick", beat, 0.78, 0.1));
+        }
+        if (step % 16 === 14) {
+          events.push(note("snare", beat, 0.74, 0.1));
+        }
       } else if (family.blastStyle === "grind") {
         if (step % 2 === 0) {
           events.push(note("kick", beat, step % 4 === 0 ? 0.95 : 0.84, 0.1));
@@ -475,6 +558,18 @@ function buildBlast(family) {
         }
         if (step % 8 === 7) {
           events.push(note("snare", beat, 0.72, 0.09));
+        }
+      } else if (family.blastStyle === "hardcore") {
+        if (step % 4 === 0) {
+          events.push(note("kick", beat, 0.94, 0.12));
+        } else if (step % 4 === 2) {
+          events.push(note("snare", beat, 0.92, 0.12));
+        }
+        if (step % 8 === 3) {
+          events.push(note("kick", beat, 0.76, 0.1));
+        }
+        if (step % 8 === 6) {
+          events.push(note("kick", beat, 0.82, 0.1));
         }
       } else {
         events.push(note(step % 2 === 0 ? "kick" : "snare", beat, step % 4 === 0 ? 0.94 : 0.84, 0.1));
@@ -528,6 +623,27 @@ function buildFill(fill) {
     events.push(note("kick", 0, 0.95));
     events.push(note("snare", 1, 0.9));
     addSequence(2, 0.25, ["rackTom", "snare", "rackTom", "floorTom", "floorTom", "snare", "floorTom", "lowFloorTom"], 0.78);
+  } else if (fill.style === "open-hat-turnaround") {
+    events.push(note("hatOpen", 0, 0.84, 0.35));
+    events.push(note("kick", 0, 0.95));
+    events.push(note("snare", 1, 0.9));
+    events.push(note("hatOpen", 2, 0.82, 0.35));
+    addSequence(2, 0.25, ["rackTom", "snare", "floorTom", "snare", "floorTom", "kick", "snare", "floorTom"], 0.78);
+  } else if (fill.style === "dbeat-snare-walk") {
+    events.push(note("hatOpen", 0, 0.82, 0.35));
+    addSequence(0, 0.25, ["snare", "kick", "snare", "snare", "snare", "kick", "rackTom", "snare", "floorTom", "snare", "floorTom", "kick", "snare", "floorTom", "snare", "floorTom"], 0.78);
+  } else if (fill.style === "mosh-tom-walk") {
+    events.push(note("rideCrash", 0, 0.88, 0.45));
+    events.push(note("kick", 0, 0.96));
+    events.push(note("snare", 1, 0.9));
+    addSequence(2, 0.25, ["floorTom", "kick", "floorTom", "snare", "rackTom", "floorTom", "snare", "floorTom"], 0.82);
+  } else if (fill.style === "hardcore-stop") {
+    events.push(note("rideCrash", 0, 0.9, 0.45));
+    events.push(note("kick", 0, 0.96));
+    events.push(note("snare", 1, 0.9));
+    events.push(note("kick", 2, 0.94));
+    events.push(note("rideCrash", 2, 0.88, 0.45));
+    addSequence(3, 0.25, ["snare", "snare", "floorTom", "floorTom"], 0.84);
   } else {
     addSequence(0, 0.25, ["snare", "kick", "snare", "snare", "snare", "kick", "rackTom", "snare", "floorTom", "snare", "floorTom", "kick", "snare", "floorTom", "snare", "floorTom"], 0.78);
   }
@@ -598,10 +714,32 @@ function buildIntro(family) {
       ["floorTom", 3.5, 0.84],
       ["snare", 3.75, 0.92],
     ],
+    "open-hat-count": [
+      ["crashLeft", 0, 0.92],
+      ["hatOpen", 0, 0.84],
+      ["kick", 0, 0.96],
+      ["snare", 1, 0.9],
+      ["hatOpen", 1.5, 0.78],
+      ["kick", 2, 0.94],
+      ["snare", 3, 0.9],
+      ["hatOpen", 3.5, 0.8],
+      ["snare", 3.75, 0.92],
+    ],
+    "mosh-pickup": [
+      ["rideCrash", 0, 0.9],
+      ["kick", 0, 0.96],
+      ["snare", 1, 0.9],
+      ["kick", 1.5, 0.86],
+      ["rideCrash", 2, 0.88],
+      ["kick", 2, 0.94],
+      ["floorTom", 3, 0.86],
+      ["snare", 3.5, 0.86],
+      ["snare", 3.75, 0.94],
+    ],
   };
 
   for (const [drum, beat, velocity] of hitsByStyle[family.introStyle] ?? hitsByStyle["crash-count"]) {
-    events.push(note(drum, beat, velocity, drum.startsWith("crash") ? 0.5 : 0.14));
+    events.push(note(drum, beat, velocity, drum.startsWith("crash") || drum === "rideCrash" ? 0.5 : 0.14));
   }
 
   events.push(note("hatOpen", 3.5, 0.68, 0.25));
