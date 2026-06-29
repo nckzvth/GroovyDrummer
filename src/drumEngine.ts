@@ -1,6 +1,6 @@
 import * as Tone from "tone";
 import { startToneAudio } from "./audioStart";
-import { drumGroupForNote, isOpenHatNote, isRideBellNote } from "./drumMap";
+import { drumGroupForNote, isFloorTomNote, isOpenHatNote, isRideBellNote } from "./drumMap";
 import { HomeKitSampleEngine } from "./homeKitEngine";
 import { loadGrooveMidi, makePlaybackSchedule } from "./midi";
 import type { Groove, PreviewEngineMode } from "./types";
@@ -140,7 +140,7 @@ class SyntheticDrumPreviewEngine {
 
     const schedule = makePlaybackSchedule(groove, midi, tempoOverride);
     const notes = schedule.notes
-      .filter((note) => drumGroupForNote(note.midi) !== null);
+      .filter((note) => drumGroupForNote(note.midi, groove.midiMap) !== null);
 
     Tone.Transport.bpm.value = schedule.tempo;
     Tone.Transport.loop = loop;
@@ -150,7 +150,7 @@ class SyntheticDrumPreviewEngine {
 
     for (const note of notes) {
       Tone.Transport.schedule((time) => {
-        this.trigger(note.midi, time, note.velocity || 0.65);
+        this.trigger(note.midi, groove.midiMap, time, note.velocity || 0.65);
       }, note.time);
     }
 
@@ -184,9 +184,9 @@ class SyntheticDrumPreviewEngine {
     this.master.volume.value = db;
   }
 
-  private trigger(noteNumber: number, time: number, velocity: number) {
+  private trigger(noteNumber: number, midiMap: Groove["midiMap"], time: number, velocity: number) {
     const v = Math.max(0.08, Math.min(1, velocity));
-    const group = drumGroupForNote(noteNumber);
+    const group = drumGroupForNote(noteNumber, midiMap);
 
     if (!group) {
       return;
@@ -203,21 +203,21 @@ class SyntheticDrumPreviewEngine {
         break;
       }
       case "hat":
-        if (isOpenHatNote(noteNumber)) {
+        if (isOpenHatNote(noteNumber, midiMap)) {
           this.hatOpen.triggerAttackRelease(0.22, time, v * syntheticSettings.hat);
         } else {
           this.hatClosed.triggerAttackRelease(0.028, time, v * syntheticSettings.hat);
         }
         break;
       case "tom":
-        if (noteNumber >= 47) {
+        if (!isFloorTomNote(noteNumber, midiMap)) {
           this.tomRack.triggerAttackRelease(noteNumber >= 50 ? "D2" : "C2", 0.15, time, v * syntheticSettings.tom);
         } else {
           this.tomFloor.triggerAttackRelease(noteNumber <= 41 ? "F1" : "G1", 0.2, time, v * syntheticSettings.tom);
         }
         break;
       case "ride":
-        if (isRideBellNote(noteNumber)) {
+        if (isRideBellNote(noteNumber, midiMap)) {
           this.rideBell.triggerAttackRelease("G5", 0.08, time, v * 0.55);
         } else {
           this.cymbal.triggerAttackRelease(0.42, time, v * 0.44 * syntheticSettings.cymbal);

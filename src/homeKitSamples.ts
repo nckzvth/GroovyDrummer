@@ -1,5 +1,5 @@
 import { assetUrl } from "./midi";
-import type { SampleArticulation, SampleLayer, SampleManifest, SampleMic } from "./types";
+import type { MidiMapMode, SampleArticulation, SampleLayer, SampleManifest, SampleMic } from "./types";
 
 const manifestPath = "samples/home-kit-balanced/manifest.json";
 let manifestPromise: Promise<SampleManifest> | null = null;
@@ -69,6 +69,66 @@ const noteArticulations = new Map<number, SampleArticulation>([
   [75, "stick-click"],
 ]);
 
+const addictiveDrumsNoteArticulations = new Map<number, SampleArticulation>([
+  [36, "kick"],
+
+  [35, "snare"],
+  [37, "snare-rim"],
+  [38, "snare"],
+  [39, "snare-rim"],
+  [40, "snare"],
+  [41, "snare"],
+  [42, "snare-crossstick"],
+  [43, "snare"],
+  [44, "snare-crossstick"],
+
+  [48, "hat-pedal"],
+  [49, "hat-closed"],
+  [50, "hat-closed"],
+  [51, "hat-closed"],
+  [52, "hat-closed"],
+  [53, "hat-closed"],
+  [54, "hat-open"],
+  [55, "hat-open"],
+  [56, "hat-open"],
+  [57, "hat-open"],
+  [58, "hat-open"],
+  [59, "hat-open"],
+
+  [65, "floor-tom"],
+  [66, "floor-tom"],
+  [67, "floor-tom"],
+  [68, "floor-tom"],
+  [69, "rack-tom"],
+  [70, "rack-tom"],
+  [71, "rack-tom"],
+  [72, "rack-tom"],
+
+  [45, "ride-bow"],
+  [60, "ride-bow"],
+  [61, "ride-bell"],
+  [62, "ride-bow"],
+  [84, "ride-bow"],
+  [85, "ride-bell"],
+  [86, "ride-bow"],
+
+  [46, "crash-left"],
+  [77, "crash-left"],
+  [79, "crash-right"],
+  [81, "crash-left"],
+  [89, "crash-right"],
+  [91, "crash-right"],
+  [93, "crash-left"],
+
+  [47, "stick-click"],
+  [73, "stick-click"],
+  [74, "stick-click"],
+  [75, "stick-click"],
+  [76, "stick-click"],
+  [97, "stick-click"],
+  [99, "stick-click"],
+]);
+
 export async function loadHomeKitManifest() {
   manifestPromise ??= fetch(assetUrl(manifestPath)).then(async (response) => {
     if (!response.ok) {
@@ -79,8 +139,9 @@ export async function loadHomeKitManifest() {
   return manifestPromise;
 }
 
-export function sampleArticulationForNote(noteNumber: number) {
-  return noteArticulations.get(noteNumber) ?? null;
+export function sampleArticulationForNote(noteNumber: number, midiMap: MidiMapMode = "gm") {
+  const articulations = midiMap === "addictive-drums" ? addictiveDrumsNoteArticulations : noteArticulations;
+  return articulations.get(noteNumber) ?? null;
 }
 
 export function isHatChokeArticulation(articulation: SampleArticulation) {

@@ -81,7 +81,7 @@ async function renderGrooveAudio(groove: Groove, tempo: number, target: StemTarg
   const [manifest, midi] = await Promise.all([loadHomeKitManifest(), loadGrooveMidi(groove)]);
   const schedule = makePlaybackSchedule(groove, midi, tempo);
   const events = withHatStops(schedule.notes.reduce<RenderEvent[]>((mapped, note) => {
-    const articulation = sampleArticulationForNote(note.midi);
+    const articulation = sampleArticulationForNote(note.midi, groove.midiMap);
     if (articulation) {
       mapped.push({
         articulation,

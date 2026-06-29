@@ -10,11 +10,63 @@ const publicDir = path.join(rootDir, "public");
 const midiOutDir = path.join(publicDir, "midi");
 const catalogPath = path.join(publicDir, "catalog.json");
 const archiveDirName = "800000_Drum_Percussion_MIDI_Archive[6_19_15]";
+const terminusDirName = "Terminus Metal MIDIPack";
 const execFileAsync = promisify(execFile);
 const { Midi } = midiPackage;
 const gmMap = JSON.parse(await readFile(path.join(rootDir, "src", "drum-map.json"), "utf8"));
 
 const gmGroups = new Map(gmMap.map((hit) => [hit.note, hit.group]));
+const addictiveDrumsGroups = new Map([
+  [36, "kick"],
+
+  [35, "snare"],
+  [37, "snare"],
+  [38, "snare"],
+  [39, "snare"],
+  [40, "snare"],
+  [41, "snare"],
+  [42, "snare"],
+  [43, "snare"],
+  [44, "snare"],
+
+  [48, "hat"],
+  [49, "hat"],
+  [50, "hat"],
+  [51, "hat"],
+  [52, "hat"],
+  [53, "hat"],
+  [54, "hat"],
+  [55, "hat"],
+  [56, "hat"],
+  [57, "hat"],
+  [58, "hat"],
+  [59, "hat"],
+
+  [65, "tom"],
+  [66, "tom"],
+  [67, "tom"],
+  [68, "tom"],
+  [69, "tom"],
+  [70, "tom"],
+  [71, "tom"],
+  [72, "tom"],
+
+  [45, "ride"],
+  [60, "ride"],
+  [61, "ride"],
+  [62, "ride"],
+  [84, "ride"],
+  [85, "ride"],
+  [86, "ride"],
+
+  [46, "crash"],
+  [77, "crash"],
+  [79, "crash"],
+  [81, "crash"],
+  [89, "crash"],
+  [91, "crash"],
+  [93, "crash"],
+]);
 const patternGroups = ["kick", "snare", "hat", "tom", "ride", "crash"];
 
 function slug(value) {
@@ -115,6 +167,63 @@ function archivePartCategory(parts, fileName) {
   return "Grooves";
 }
 
+const terminusCategoryOrder = new Map([
+  ["Grooves", 1],
+  ["Blasts", 2],
+  ["Fills", 3],
+  ["Song Parts", 4],
+]);
+
+function terminusCategorySort(categoryName) {
+  return terminusCategoryOrder.get(categoryName) ?? 99;
+}
+
+function isTerminusFill(fileName) {
+  return /_F_/i.test(fileName);
+}
+
+function terminusCategory(parts, fileName) {
+  const text = [...parts, fileName].join(" ").replace(/[_-]+/g, " ").toLowerCase();
+
+  if (parts.some((part) => /^song\s+\d+/i.test(part))) {
+    return "Song Parts";
+  }
+  if (/\bblast\b/.test(text)) {
+    return "Blasts";
+  }
+  if (isTerminusFill(fileName) || /\bfill(?:s)?\b/.test(text)) {
+    return "Fills";
+  }
+  return "Grooves";
+}
+
+function prettyTerminusName(fileName) {
+  const isFill = isTerminusFill(fileName);
+  let name = path.basename(fileName, path.extname(fileName))
+    .replace(/^Metal_V_\s*/i, "")
+    .replace(/_C_Terminus(?:_F_)?$/i, "")
+    .replace(/_F_$/i, "")
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (isFill && !/\bfill\b/i.test(name)) {
+    name = `${name} Fill`;
+  }
+
+  return name;
+}
+
+function terminusGrooveNumber(grooveName) {
+  return Number(
+    grooveName.match(/\bGroove\s*(\d+)/i)?.[1] ??
+    grooveName.match(/\bBlast\s*(\d+)/i)?.[1] ??
+    grooveName.match(/\bG(\d+)/i)?.[1] ??
+    grooveName.match(/(\d+)/)?.[1] ??
+    0,
+  );
+}
+
 function stableHash(value) {
   let hash = 2166136261;
   for (let index = 0; index < value.length; index += 1) {
@@ -167,13 +276,13 @@ async function listArchivePunkMidiFiles(archiveDir) {
     .sort((a, b) => a.localeCompare(b));
 }
 
-function makePattern(notes, duration) {
+function makePattern(notes, duration, groups = gmGroups) {
   const bins = 32;
   const lanes = Object.fromEntries(patternGroups.map((group) => [group, Array(bins).fill(0)]));
   const safeDuration = Math.max(duration, 0.25);
 
   for (const note of notes) {
-    const group = gmGroups.get(note.midi);
+    const group = groups.get(note.midi);
     if (!group) {
       continue;
     }
@@ -184,12 +293,12 @@ function makePattern(notes, duration) {
   return lanes;
 }
 
-function summarizeHits(notes) {
+function summarizeHits(notes, groups = gmGroups) {
   const counts = Object.fromEntries(patternGroups.map((group) => [group, 0]));
   const usedNotes = new Set();
 
   for (const note of notes) {
-    const group = gmGroups.get(note.midi);
+    const group = groups.get(note.midi);
     if (!group) {
       continue;
     }
@@ -259,6 +368,7 @@ async function main() {
         id: `${packId}/${tempo.id}/${categoryId}/${slug(grooveName)}`,
         packId,
         packName,
+        midiMap: "gm",
         tempoId: tempo.id,
         tempoLabel: tempo.label,
         tempoRange: tempo.range,
@@ -329,6 +439,7 @@ async function main() {
         id: `${packId}/${categoryId}/${tempo.id}/${slug(grooveName)}-${sourceHash}`,
         packId,
         packName,
+        midiMap: "gm",
         tempoId: tempo.id,
         tempoLabel: tempo.label,
         tempoRange: tempo.range,
@@ -348,6 +459,81 @@ async function main() {
         hitCounts: hits.counts,
         usedNotes: hits.notes,
         pattern: makePattern(notes, duration),
+      });
+    }
+  } catch (error) {
+    if (error?.code !== "ENOENT") {
+      throw error;
+    }
+  }
+
+  const terminusDir = path.join(rootDir, terminusDirName);
+  try {
+    await stat(terminusDir);
+    const packId = "terminus-metal";
+    const packName = "Terminus Metal";
+    const midiFiles = await listMidiFiles(terminusDir);
+    packNames.set(packId, packName);
+
+    for (const midiPath of midiFiles) {
+      const relativeSourcePath = path.relative(rootDir, midiPath);
+      const relativeParts = path.relative(terminusDir, midiPath).split(path.sep);
+      const fileName = relativeParts.at(-1);
+      const dirParts = relativeParts.slice(0, -1);
+
+      if (!fileName) {
+        continue;
+      }
+
+      const [bytes, buffer] = await Promise.all([stat(midiPath), readFile(midiPath)]);
+      const midi = new Midi(buffer);
+      const notes = midi.tracks.flatMap((track) => track.notes);
+      const duration = midi.duration || notes.reduce((max, note) => Math.max(max, note.time + note.duration), 0);
+      const bpm = Math.round(midi.header.tempos[0]?.bpm ?? 0) || null;
+      const tempo = tempoFromBpm(bpm);
+      const categoryName = terminusCategory(dirParts, fileName);
+      const categorySort = terminusCategorySort(categoryName);
+      const categoryId = slug(categoryName);
+      const grooveName = prettyTerminusName(fileName);
+      const grooveNumber = terminusGrooveNumber(grooveName);
+      const sourceHash = stableHash(relativeSourcePath);
+      const destinationPath = path.join(
+        midiOutDir,
+        packId,
+        categoryId,
+        tempo.id,
+        `${slug(grooveName)}-${sourceHash}.mid`,
+      );
+      const assetPath = path.relative(publicDir, destinationPath).split(path.sep).join("/");
+      const hits = summarizeHits(notes, addictiveDrumsGroups);
+
+      await mkdir(path.dirname(destinationPath), { recursive: true });
+      await copyFile(midiPath, destinationPath);
+
+      grooves.push({
+        id: `${packId}/${categoryId}/${tempo.id}/${slug(grooveName)}-${sourceHash}`,
+        packId,
+        packName,
+        midiMap: "addictive-drums",
+        tempoId: tempo.id,
+        tempoLabel: tempo.label,
+        tempoRange: tempo.range,
+        tempoSort: tempo.sort,
+        bpm: tempo.bpm,
+        categoryId,
+        categoryName,
+        categorySort,
+        grooveName,
+        grooveNumber,
+        meter: parseMeter(`${dirParts.join(" ")} ${grooveName}`),
+        sourcePath: relativeSourcePath.split(path.sep).join("/"),
+        assetPath,
+        size: bytes.size,
+        duration: Number(duration.toFixed(3)),
+        noteCount: notes.length,
+        hitCounts: hits.counts,
+        usedNotes: hits.notes,
+        pattern: makePattern(notes, duration, addictiveDrumsGroups),
       });
     }
   } catch (error) {

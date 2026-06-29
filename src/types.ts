@@ -1,4 +1,5 @@
 export type DrumGroup = "kick" | "snare" | "hat" | "tom" | "ride" | "crash";
+export type MidiMapMode = "gm" | "addictive-drums";
 export type PreviewEngineMode = "home-kit" | "synthetic";
 export type AudioExportKind = "midi" | "mix-wav" | "stems-zip";
 export type SampleMic = "close" | "overheads" | "room";
@@ -53,6 +54,7 @@ export interface Groove {
   id: string;
   packId: string;
   packName: string;
+  midiMap: MidiMapMode;
   tempoId: string;
   tempoLabel: string;
   tempoRange: [number, number] | null;

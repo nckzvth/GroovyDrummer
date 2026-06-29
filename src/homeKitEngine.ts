@@ -73,7 +73,7 @@ export class HomeKitSampleEngine {
     const events = schedule.notes
       .map((note) => ({
         ...note,
-        articulation: sampleArticulationForNote(note.midi),
+        articulation: sampleArticulationForNote(note.midi, groove.midiMap),
       }))
       .filter((event): event is typeof event & { articulation: SampleArticulation } => event.articulation !== null);
 
