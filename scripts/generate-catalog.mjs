@@ -84,44 +84,35 @@ function stripTempo(value) {
   return pretty.replace(/\b\d{2,3}\s*bpm\b/gi, "").replace(/\s+/g, " ").trim() || pretty;
 }
 
-function stripGmFamily(value) {
-  return prettyArchiveSegment(value)
-    .replace(/^GM\s*-\s*/i, "")
-    .trim();
+const archiveCategoryOrder = new Map([
+  ["Backbeats", 1],
+  ["Grooves", 2],
+  ["Fills", 3],
+  ["Intros / Endings", 4],
+]);
+
+function archiveCategorySort(categoryName) {
+  return archiveCategoryOrder.get(categoryName) ?? 99;
 }
 
-function stripGmKit(value) {
-  return stripGmFamily(value)
-    .replace(/^Punk\s*/i, "")
-    .replace(/^Rock 1\s*/i, "")
-    .trim();
-}
+function archivePartCategory(parts, fileName) {
+  const text = [...parts.map(stripTempo), prettyArchiveSegment(fileName)]
+    .join(" ")
+    .toLowerCase();
 
-function compactCategory(parts) {
-  const [collection = "", family = "", kit = "", mode = ""] = parts;
-
-  if (/^GM MIDI Pack/i.test(collection)) {
-    return [
-      "GM MIDI",
-      stripGmFamily(family),
-      stripGmKit(kit),
-      stripTempo(mode),
-    ].filter(Boolean).join(" / ");
+  if (/\bback\s*beat\b/.test(text) || /\bbackbeat\b/.test(text)) {
+    return "Backbeats";
   }
-
-  if (/Studio Drummer/i.test(collection)) {
-    return ["Studio Drummer", stripTempo(family)].filter(Boolean).join(" / ");
+  if (/\bfill(?:s)?\b/.test(text) && !/\bno\s+fill\b/.test(text)) {
+    return "Fills";
   }
-
-  if (/80.+Drummer/i.test(collection)) {
-    return ["80s Drummer", stripTempo(family), stripTempo(kit)].filter(Boolean).join(" / ");
+  if (/\bintro\b|\boutro\b|\bend(?:ing)?\b|\bcount(?:s)?\b|\bhit(?:s)?\b/.test(text)) {
+    return "Intros / Endings";
   }
-
-  if (/Superior Drummer/i.test(collection)) {
-    return ["Superior Drummer 2", stripTempo(family), stripTempo(kit)].filter(Boolean).join(" / ");
+  if (/\bgroove(?:s)?\b|\bsong\s*loop(?:s)?\b|\bsingle\s*track\b|\bmulti[-\s]*track\b|\btype\s*0\b|\bpunk\s*rock\b|\bstraight\b|\bclassic\s*beats\b|\bbonus\b|\bpreview\s*file(?:s)?\b/.test(text)) {
+    return "Grooves";
   }
-
-  return parts.map(stripTempo).filter(Boolean).slice(0, 4).join(" / ") || "Punk";
+  return "Grooves";
 }
 
 function stableHash(value) {
@@ -228,13 +219,6 @@ async function main() {
 
   const grooves = [];
   const packNames = new Map();
-  const archiveCategorySorts = new Map();
-  const archiveCategorySort = (categoryName) => {
-    if (!archiveCategorySorts.has(categoryName)) {
-      archiveCategorySorts.set(categoryName, archiveCategorySorts.size + 1);
-    }
-    return archiveCategorySorts.get(categoryName);
-  };
 
   for (const packDirName of packDirs) {
     const packName = packDirName.replace(/\s*\(JJ Groove Packs\)$/, "");
@@ -317,7 +301,7 @@ async function main() {
       }
 
       const tempo = parseArchiveTempo(dirParts, fileName);
-      const categoryName = compactCategory(dirParts);
+      const categoryName = archivePartCategory(dirParts, fileName);
       const categorySort = 1000 + archiveCategorySort(categoryName);
       const categoryId = slug(categoryName);
       const grooveName = prettyArchiveSegment(path.basename(fileName, path.extname(fileName)));

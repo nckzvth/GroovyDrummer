@@ -717,6 +717,7 @@ function getFilteredGrooves() {
       groove.packName,
       groove.tempoLabel,
       groove.categoryName,
+      groove.sourcePath,
       groove.meter ?? "",
     ].some((value) => value.toLowerCase().includes(query));
   });
