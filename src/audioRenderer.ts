@@ -7,6 +7,7 @@ import {
   sampleArticulationForNote,
   sampleLayerUrl,
 } from "./homeKitSamples";
+import { homeKitSampleGain } from "./homeKitMix";
 import { loadGrooveMidi, makePlaybackSchedule } from "./midi";
 import { encodeWav24 } from "./wavEncoder";
 import type { Groove, SampleArticulation, SampleManifest, SampleMic } from "./types";
@@ -29,24 +30,6 @@ type RenderEvent = {
 
 const sampleRate = 44100;
 const renderTailSeconds = 4;
-
-const micLevels: Record<SampleMic, number> = {
-  close: 0,
-  overheads: -8,
-  room: -12,
-};
-
-const articulationLevels: Partial<Record<SampleArticulation, number>> = {
-  "hat-closed": -3,
-  "hat-open": -4,
-  "hat-pedal": -5,
-  "ride-bow": -3,
-  "ride-bell": -4,
-  "ride-crash": -5,
-  "crash-left": -5,
-  "crash-right": -5,
-  "stick-click": -8,
-};
 
 let decodeContext: AudioContext | null = null;
 const bufferCache = new Map<string, Promise<AudioBuffer>>();
@@ -109,10 +92,9 @@ async function renderGrooveAudio(groove: Groove, tempo: number, target: StemTarg
       const audioBuffer = await loadBuffer(sampleLayerUrl(manifest, layer));
       const source = context.createBufferSource();
       const gain = context.createGain();
-      const articulationGain = dbToGain(articulationLevels[event.articulation] ?? 0);
 
       source.buffer = audioBuffer;
-      gain.gain.value = Math.max(0.02, Math.min(1, event.velocity)) * dbToGain(micLevels[mic]) * dbToGain(-6) * articulationGain;
+      gain.gain.value = homeKitSampleGain(event.articulation, mic, event.velocity);
       source.connect(gain);
       gain.connect(context.destination);
       source.start(event.time);
@@ -195,10 +177,6 @@ function loadBuffer(url: string) {
   });
   bufferCache.set(url, promise);
   return promise;
-}
-
-function dbToGain(db: number) {
-  return 10 ** (db / 20);
 }
 
 function getDecodeContext() {

@@ -9,26 +9,9 @@ import {
   sampleArticulationForNote,
   sampleLayerUrl,
 } from "./homeKitSamples";
+import { homeKitMicLevels, homeKitMasterLevel, homeKitSourceGain } from "./homeKitMix";
 import { loadGrooveMidi, makePlaybackSchedule } from "./midi";
 import type { Groove, SampleArticulation, SampleManifest, SampleMic } from "./types";
-
-const micLevels: Record<SampleMic, number> = {
-  close: 0,
-  overheads: -8,
-  room: -12,
-};
-
-const articulationLevels: Partial<Record<SampleArticulation, number>> = {
-  "hat-closed": -3,
-  "hat-open": -4,
-  "hat-pedal": -5,
-  "ride-bow": -3,
-  "ride-bell": -4,
-  "ride-crash": -5,
-  "crash-left": -5,
-  "crash-right": -5,
-  "stick-click": -8,
-};
 
 export class HomeKitSampleEngine {
   private readonly context = Tone.getContext().rawContext as AudioContext;
@@ -49,11 +32,11 @@ export class HomeKitSampleEngine {
   onStatus: ((message: string) => void) | null = null;
 
   constructor() {
-    this.master.gain.value = dbToGain(-6);
+    this.master.gain.value = dbToGain(homeKitMasterLevel);
     this.master.connect(this.context.destination);
 
     for (const mic of Object.keys(this.micBuses) as SampleMic[]) {
-      this.micBuses[mic].gain.value = dbToGain(micLevels[mic]);
+      this.micBuses[mic].gain.value = dbToGain(homeKitMicLevels[mic]);
       this.micBuses[mic].connect(this.master);
     }
   }
@@ -189,10 +172,9 @@ export class HomeKitSampleEngine {
         const source = this.context.createBufferSource();
         const gain = this.context.createGain();
         const safeTime = Math.max(time, this.context.currentTime);
-        const articulationGain = dbToGain(articulationLevels[articulation] ?? 0);
 
         source.buffer = audioBuffer;
-        gain.gain.setValueAtTime(Math.max(0.02, Math.min(1, velocity)) * articulationGain, safeTime);
+        gain.gain.setValueAtTime(homeKitSourceGain(articulation, velocity), safeTime);
         source.connect(gain);
         gain.connect(this.micBuses[mic]);
         source.onended = () => {

@@ -8,8 +8,10 @@
     "dev": "vite --host 0.0.0.0",
     "prepare:home-kit": "node scripts/prepare-home-kit.mjs",
     "verify-home-kit": "node scripts/verify-home-kit.mjs",
+    "validate:home-kit-mix": "node scripts/validate-home-kit-mix.mjs",
+    "validate:groovy-drummer": "node scripts/validate-groovy-drummer.mjs",
     "generate:catalog": "node scripts/generate-catalog.mjs",
-    "build": "npm run generate:catalog && npm run verify-home-kit && tsc --noEmit && vite build",
+    "build": "npm run generate:catalog && npm run verify-home-kit && npm run validate:groovy-drummer && npm run validate:home-kit-mix && tsc --noEmit && vite build",
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {

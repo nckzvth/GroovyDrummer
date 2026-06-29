@@ -101,55 +101,199 @@ const groovyDrummerFamilies = [
     name: "Chain Sprint",
     bpm: 232,
     surface: "hatClosed",
+    mainPulseStep: 0.5,
+    surfaceVelocity: 0.78,
     blastStyle: "alternating",
-    mainA: { kicks: [0, 0.75, 1.5, 2, 2.75, 3.5], snares: [1, 3] },
-    mainB: { kicks: [0, 0.5, 1.5, 2.25, 2.75, 3.5], snares: [1, 2.5, 3] },
-    backbeat: { kicks: [0, 0.5, 1.75, 2.25, 3.5], snares: [1, 3] },
+    introName: "Crash Count-In",
+    introStyle: "crash-count",
+    mainA: {
+      bars: [
+        { kicks: [0, 0.5, 2, 2.5], snares: [1, 3] },
+        { kicks: [0, 0.5, 1.5, 2, 2.5, 3.5], snares: [1, 3] },
+      ],
+    },
+    mainB: {
+      bars: [
+        { kicks: [0, 0.5, 1.5, 2, 2.5], snares: [1, 3] },
+        { kicks: [0, 0.5, 1.5, 2, 2.5, 3.5], snares: [1, 3], openHatBeats: [3.5] },
+      ],
+    },
+    backbeat: {
+      surface: "hatClosed",
+      bars: [
+        { kicks: [0, 0.5, 2, 2.5], snares: [1, 3] },
+        { kicks: [0, 0.5, 1.5, 2, 2.5, 3.5], snares: [1, 3], openHatBeats: [3.5] },
+      ],
+    },
+    fills: [
+      { name: "Floor Tom Turnaround", style: "floor-turnaround" },
+      { name: "Snare Push Fill", style: "snare-push" },
+    ],
   },
   {
     name: "D-Beat Battery",
     bpm: 220,
     surface: "ride",
-    blastStyle: "skank",
-    mainA: { kicks: [0, 0.75, 2, 2.75], snares: [1.5, 3] },
-    mainB: { kicks: [0, 0.5, 1.75, 2.5, 3.25], snares: [1.5, 3] },
-    backbeat: { kicks: [0, 0.75, 1.75, 2.25, 3.25], snares: [1, 3] },
+    mainPulseStep: 0.5,
+    surfaceVelocity: 0.76,
+    blastStyle: "dbeat",
+    introName: "D-Beat Pickup",
+    introStyle: "dbeat-pickup",
+    mainA: {
+      bars: [
+        { kicks: [0, 0.5, 2, 2.5], snares: [1, 3] },
+        { kicks: [0, 0.5, 1.5, 2, 2.5], snares: [1, 3] },
+      ],
+    },
+    mainB: {
+      bars: [
+        { kicks: [0, 0.5, 1.5, 2, 2.5, 3.5], snares: [1, 3] },
+        { kicks: [0, 0.5, 2, 2.5, 3.5], snares: [1, 3], bellBeats: [3.5] },
+      ],
+    },
+    backbeat: {
+      surface: "ride",
+      bars: [
+        { kicks: [0, 0.5, 1.5, 2, 2.5], snares: [1, 3] },
+        { kicks: [0, 0.5, 2, 2.5, 3.5], snares: [1, 3], bellBeats: [3.5] },
+      ],
+    },
+    fills: [
+      { name: "Rack-To-Floor Fill", style: "rack-floor" },
+      { name: "Crash Stop Fill", style: "crash-stop" },
+    ],
   },
   {
-    name: "Skank Collapse",
+    name: "Fastcore Sprint",
     bpm: 244,
     surface: "hatClosed",
+    mainPulseStep: 0.5,
+    surfaceVelocity: 0.8,
     blastStyle: "hammer",
-    mainA: { kicks: [0, 0.5, 2, 2.5], snares: [1, 3] },
-    mainB: { kicks: [0, 0.5, 1.5, 2, 2.75, 3.5], snares: [1, 3] },
-    backbeat: { kicks: [0, 1.75, 2, 2.5, 3.5], snares: [1, 3] },
+    introName: "Fastcore Chokes",
+    introStyle: "fastcore-chokes",
+    mainA: {
+      bars: [
+        { kicks: [0, 0.5, 2, 2.5], snares: [1, 3] },
+        { kicks: [0, 0.5, 1.5, 2, 2.5], snares: [1, 3] },
+      ],
+    },
+    mainB: {
+      bars: [
+        { kicks: [0, 0.5, 2, 2.5, 3.5], snares: [1, 3] },
+        { kicks: [0, 0.5, 1.5, 2, 2.5, 3.5], snares: [1, 3], openHatBeats: [3.5] },
+      ],
+    },
+    backbeat: {
+      surface: "hatClosed",
+      bars: [
+        { kicks: [0, 0.5, 2, 2.5, 3.5], snares: [1, 3] },
+        { kicks: [0, 0.5, 1.5, 2, 2.5], snares: [1, 3] },
+      ],
+    },
+    fills: [
+      { name: "Quarter-Tom Drop", style: "quarter-tom" },
+      { name: "Snare Roll Exit", style: "snare-roll" },
+    ],
   },
   {
     name: "Powerviolence Chop",
     bpm: 265,
     surface: "ride",
+    mainPulseStep: 0.5,
+    surfaceVelocity: 0.78,
     blastStyle: "bomb",
-    mainA: { kicks: [0, 0.25, 0.75, 2, 2.25, 3.5], snares: [1, 3] },
-    mainB: { kicks: [0, 0.25, 1.25, 2, 2.25, 2.75, 3.5], snares: [1, 2.5, 3] },
-    backbeat: { kicks: [0, 0.5, 1.5, 2, 2.25, 3.5], snares: [1, 3] },
+    introName: "Stop-Start Setup",
+    introStyle: "stop-start",
+    mainA: {
+      bars: [
+        { kicks: [0, 0.5, 2, 2.5, 3.5], snares: [1, 3] },
+        { kicks: [0, 0.5, 1.5, 2, 2.5], snares: [1, 3] },
+      ],
+    },
+    mainB: {
+      bars: [
+        { kicks: [0, 0.5, 1.5, 2, 2.5, 3.5], snares: [1, 3] },
+        { kicks: [0, 0.5, 1.5, 2, 2.5, 3.5], snares: [1, 3], bellBeats: [3.5] },
+      ],
+    },
+    backbeat: {
+      surface: "ride",
+      bars: [
+        { kicks: [0, 0.5, 1.5, 2, 3.5], snares: [1, 3] },
+        { kicks: [0, 0.5, 2, 2.5], snares: [1, 3], crashBeats: [2] },
+      ],
+    },
+    fills: [
+      { name: "Choke Turnaround", style: "choke-turnaround" },
+      { name: "Floor Slam Fill", style: "floor-slam" },
+    ],
   },
   {
     name: "Grind Throttle",
     bpm: 280,
     surface: "ride",
-    blastStyle: "alternating",
-    mainA: { kicks: [0, 0.5, 1.25, 2, 2.5, 3.25], snares: [1, 3] },
-    mainB: { kicks: [0, 0.25, 0.75, 1.5, 2, 2.5, 3.25], snares: [1, 2, 3] },
-    backbeat: { kicks: [0, 0.5, 1.75, 2.25, 3.25], snares: [1, 3] },
+    mainPulseStep: 0.5,
+    surfaceVelocity: 0.78,
+    blastStyle: "grind",
+    introName: "Blast Pickup",
+    introStyle: "blast-pickup",
+    mainA: {
+      bars: [
+        { kicks: [0, 0.5, 2, 2.5], snares: [1, 3] },
+        { kicks: [0, 0.5, 1.5, 2, 2.5, 3.5], snares: [1, 3] },
+      ],
+    },
+    mainB: {
+      bars: [
+        { kicks: [0, 0.5, 1.5, 2, 2.5], snares: [1, 3] },
+        { kicks: [0, 0.5, 1.5, 2, 2.5, 3.5], snares: [1, 3], bellBeats: [3.5] },
+      ],
+    },
+    backbeat: {
+      surface: "ride",
+      bars: [
+        { kicks: [0, 0.5, 1.5, 2, 2.5], snares: [1, 3] },
+        { kicks: [0, 0.5, 1.5, 2, 3.5], snares: [1, 3], bellBeats: [3.5] },
+      ],
+    },
+    fills: [
+      { name: "High-Speed Tom Run", style: "speed-tom" },
+      { name: "Snare Drag Exit", style: "snare-drag" },
+    ],
   },
   {
     name: "Two-Step Knife",
     bpm: 205,
     surface: "hatClosed",
-    blastStyle: "skank",
-    mainA: { kicks: [0, 0.5, 2, 2.5, 3.5], snares: [1, 3] },
-    mainB: { kicks: [0, 0.75, 1.75, 2, 2.5, 3.5], snares: [1, 3] },
-    backbeat: { kicks: [0, 0.5, 2, 2.75], snares: [1, 3] },
+    mainPulseStep: 0.5,
+    surfaceVelocity: 0.78,
+    blastStyle: "skate",
+    introName: "Two-Step Count",
+    introStyle: "two-step-count",
+    mainA: {
+      bars: [
+        { kicks: [0, 0.5, 2, 2.5], snares: [1, 3] },
+        { kicks: [0, 0.5, 2, 2.5, 3.5], snares: [1, 3] },
+      ],
+    },
+    mainB: {
+      bars: [
+        { kicks: [0, 0.5, 2, 2.5], snares: [1, 3] },
+        { kicks: [0, 0.5, 1.5, 2, 2.5, 3.5], snares: [1, 3], openHatBeats: [3.5] },
+      ],
+    },
+    backbeat: {
+      surface: "hatClosed",
+      bars: [
+        { kicks: [0, 0.5, 2, 2.5], snares: [1, 3] },
+        { kicks: [0, 0.5, 2, 3.5], snares: [1, 3], openHatBeats: [3.5] },
+      ],
+    },
+    fills: [
+      { name: "Two-Step Tom Walk", style: "two-step-tom" },
+      { name: "Two-Step Snare Walk", style: "two-step-snare" },
+    ],
   },
 ];
 
@@ -219,31 +363,34 @@ function addBarGroove(events, barStart, pattern, surfaceNote, options = {}) {
   const pulseVelocity = options.pulseVelocity ?? (surfaceNote === "ride" ? 0.56 : 0.62);
   addPulse(events, barStart, 4, pulseStep, surfaceNote, pulseStep === 0.25 ? 4 : 2, pulseVelocity);
 
-  for (const kickBeat of pattern.kicks) {
+  for (const kickBeat of pattern.kicks ?? []) {
     events.push(note("kick", barStart + kickBeat, kickBeat % 1 === 0 ? 0.98 : 0.86, 0.14));
   }
-  for (const snareBeat of pattern.snares) {
+  for (const snareBeat of pattern.snares ?? []) {
     events.push(note("snare", barStart + snareBeat, snareBeat % 1 === 0 ? 0.96 : 0.88, 0.14));
   }
 
-  if (options.openHat) {
-    events.push(note("hatOpen", barStart + 3.5, 0.62, 0.28));
+  for (const openHatBeat of pattern.openHatBeats ?? []) {
+    events.push(note("hatOpen", barStart + openHatBeat, 0.68, 0.28));
   }
-  if (options.bell) {
-    events.push(note("rideBell", barStart + 1.5, 0.72, 0.18));
+  for (const bellBeat of pattern.bellBeats ?? []) {
+    events.push(note("rideBell", barStart + bellBeat, 0.82, 0.18));
+  }
+  for (const crashBeat of pattern.crashBeats ?? []) {
+    addCrash(events, barStart + crashBeat, crashBeat >= 2, 0.9);
   }
 }
 
 function buildMainGroove(family, variant) {
   const events = [];
-  const pattern = variant === "A" ? family.mainA : family.mainB;
+  const section = variant === "A" ? family.mainA : family.mainB;
   const alternateSurface = variant === "B" && family.surface === "hatClosed" ? "ride" : family.surface;
 
   for (let bar = 0; bar < 2; bar += 1) {
     const barStart = bar * 4;
-    addBarGroove(events, barStart, pattern, alternateSurface, {
-      openHat: variant === "B" && bar === 1,
-      bell: variant === "B" && alternateSurface === "ride" && bar === 1,
+    addBarGroove(events, barStart, barPattern(section, bar), alternateSurface, {
+      pulseStep: family.mainPulseStep,
+      pulseVelocity: family.surfaceVelocity,
     });
     if (bar === 0) {
       addCrash(events, barStart, false, 0.94);
@@ -256,10 +403,9 @@ function buildMainGroove(family, variant) {
 function buildBackbeat(family) {
   const events = [];
   for (let bar = 0; bar < 2; bar += 1) {
-    addBarGroove(events, bar * 4, family.backbeat, family.surface, {
-      pulseStep: 0.5,
-      pulseVelocity: 0.68,
-      openHat: bar === 1,
+    addBarGroove(events, bar * 4, barPattern(family.backbeat, bar), family.backbeat.surface ?? family.surface, {
+      pulseStep: family.backbeat.pulseStep ?? 0.5,
+      pulseVelocity: family.backbeat.surfaceVelocity ?? family.surfaceVelocity,
     });
   }
   addCrash(events, 0, false, 0.92);
@@ -273,7 +419,7 @@ function buildBlast(family) {
   for (let bar = 0; bar < 2; bar += 1) {
     const barStart = bar * 4;
     addCrash(events, barStart, bar === 1, 0.9);
-    addPulse(events, barStart, 4, 0.25, surface, 4, surface === "ride" ? 0.56 : 0.62);
+    addPulse(events, barStart, 4, 0.25, surface, 4, surface === "ride" ? 0.72 : 0.76);
 
     for (let step = 0; step < 16; step += 1) {
       const beat = barStart + step * 0.25;
@@ -285,9 +431,14 @@ function buildBlast(family) {
           events.push(note("kick", beat, 0.76, 0.1));
         }
       } else if (family.blastStyle === "hammer") {
-        events.push(note(step % 2 === 0 ? "kick" : "snare", beat, step % 4 === 0 ? 0.94 : 0.82, 0.1));
-        if (step % 4 === 2) {
-          events.push(note("kick", beat, 0.72, 0.1));
+        if (step % 4 === 0) {
+          events.push(note("kick", beat, 0.94, 0.12));
+        } else if (step % 4 === 2) {
+          events.push(note("snare", beat, 0.92, 0.12));
+        } else if (step % 4 === 1) {
+          events.push(note("kick", beat, 0.76, 0.1));
+        } else {
+          events.push(note("snare", beat, 0.76, 0.1));
         }
       } else if (family.blastStyle === "skank") {
         if (step % 4 === 0) {
@@ -296,6 +447,34 @@ function buildBlast(family) {
           events.push(note("snare", beat, 0.92, 0.12));
         } else if (step % 4 === 3) {
           events.push(note("kick", beat, 0.7, 0.1));
+        }
+      } else if (family.blastStyle === "dbeat") {
+        if (step % 4 === 0) {
+          events.push(note("kick", beat, 0.94, 0.12));
+        }
+        if (step % 4 === 2) {
+          events.push(note("snare", beat, 0.92, 0.12));
+        }
+        if (step % 8 === 6) {
+          events.push(note("kick", beat, 0.78, 0.1));
+        }
+      } else if (family.blastStyle === "grind") {
+        if (step % 2 === 0) {
+          events.push(note("kick", beat, step % 4 === 0 ? 0.95 : 0.84, 0.1));
+        } else {
+          events.push(note("snare", beat, 0.86, 0.1));
+        }
+        if (step % 8 === 4) {
+          events.push(note("snare", beat, 0.92, 0.1));
+        }
+      } else if (family.blastStyle === "skate") {
+        if (step % 4 === 0) {
+          events.push(note("kick", beat, 0.94, 0.12));
+        } else if (step % 4 === 2) {
+          events.push(note("snare", beat, 0.92, 0.12));
+        }
+        if (step % 8 === 7) {
+          events.push(note("snare", beat, 0.72, 0.09));
         }
       } else {
         events.push(note(step % 2 === 0 ? "kick" : "snare", beat, step % 4 === 0 ? 0.94 : 0.84, 0.1));
@@ -306,27 +485,51 @@ function buildBlast(family) {
   return events;
 }
 
-function buildFill(family, variant) {
+function buildFill(fill) {
   const events = [];
-  events.push(note("kick", 0, 0.95, 0.12));
-  events.push(note("snare", 1, 0.9, 0.12));
+  const addSequence = (startBeat, step, drums, velocity = 0.84) => {
+    drums.forEach((drum, index) => {
+      events.push(note(drum, startBeat + index * step, index % 4 === 0 ? Math.min(0.96, velocity + 0.1) : velocity, 0.14));
+    });
+  };
 
-  if (variant === "Tom Run") {
-    const toms = ["snare", "rackTom", "rackTom", "floorTom", "floorTom", "lowFloorTom", "snare", "floorTom"];
-    for (let index = 0; index < toms.length; index += 1) {
-      events.push(note(toms[index], 2 + index * 0.25, index % 2 === 0 ? 0.88 : 0.78, 0.18));
-    }
+  if (fill.style === "floor-turnaround") {
+    events.push(note("kick", 0, 0.94));
+    events.push(note("snare", 1, 0.88));
+    addSequence(2, 0.25, ["rackTom", "rackTom", "floorTom", "floorTom", "lowFloorTom", "floorTom", "snare", "floorTom"], 0.8);
+  } else if (fill.style === "snare-push") {
+    addSequence(0, 0.25, ["snare", "snare", "snare", "snare", "kick", "snare", "kick", "snare", "rackTom", "snare", "floorTom", "snare", "floorTom", "floorTom", "snare", "snare"], 0.78);
+  } else if (fill.style === "rack-floor") {
+    events.push(note("kick", 0, 0.95));
+    addSequence(1, 0.25, ["snare", "snare", "rackTom", "rackTom", "rackTom", "floorTom", "floorTom", "floorTom", "snare", "floorTom", "snare", "floorTom"], 0.82);
+  } else if (fill.style === "crash-stop") {
+    addCrash(events, 0, false, 0.92);
+    events.push(note("kick", 0, 0.96));
+    events.push(note("snare", 1, 0.9));
+    events.push(note("kick", 2, 0.94));
+    addCrash(events, 2, true, 0.92);
+    addSequence(3, 0.25, ["snare", "snare", "floorTom", "floorTom"], 0.82);
+  } else if (fill.style === "quarter-tom") {
+    addSequence(0, 0.5, ["snare", "rackTom", "floorTom", "lowFloorTom", "snare", "rackTom", "floorTom", "lowFloorTom"], 0.9);
+  } else if (fill.style === "snare-roll") {
+    addSequence(0, 0.25, ["snare", "snare", "kick", "snare", "snare", "snare", "rackTom", "snare", "snare", "snare", "floorTom", "snare", "rackTom", "floorTom", "floorTom", "snare"], 0.76);
+  } else if (fill.style === "choke-turnaround") {
+    addCrash(events, 0, false, 0.9);
+    events.push(note("kick", 0, 0.95));
+    addSequence(1, 0.5, ["snare", "floorTom", "snare", "floorTom"], 0.86);
+    addSequence(3, 0.25, ["snare", "snare", "floorTom", "floorTom"], 0.8);
+  } else if (fill.style === "floor-slam") {
+    addSequence(0, 0.25, ["floorTom", "kick", "floorTom", "snare", "floorTom", "kick", "floorTom", "snare", "rackTom", "rackTom", "floorTom", "floorTom", "lowFloorTom", "floorTom", "snare", "floorTom"], 0.82);
+  } else if (fill.style === "speed-tom") {
+    addSequence(0, 0.25, ["snare", "rackTom", "snare", "rackTom", "floorTom", "floorTom", "snare", "floorTom", "rackTom", "rackTom", "floorTom", "floorTom", "lowFloorTom", "floorTom", "snare", "floorTom"], 0.8);
+  } else if (fill.style === "snare-drag") {
+    addSequence(0, 0.25, ["snare", "snare", "snare", "kick", "snare", "snare", "snare", "kick", "snare", "rackTom", "snare", "floorTom", "snare", "floorTom", "snare", "snare"], 0.78);
+  } else if (fill.style === "two-step-tom") {
+    events.push(note("kick", 0, 0.95));
+    events.push(note("snare", 1, 0.9));
+    addSequence(2, 0.25, ["rackTom", "snare", "rackTom", "floorTom", "floorTom", "snare", "floorTom", "lowFloorTom"], 0.78);
   } else {
-    for (let index = 0; index < 16; index += 1) {
-      const beat = index * 0.25;
-      if (index >= 4) {
-        const drum = index < 10 ? "snare" : index < 13 ? "rackTom" : "floorTom";
-        events.push(note(drum, beat, index % 4 === 0 ? 0.9 : 0.72, 0.13));
-      }
-      if ([6, 11, 14].includes(index)) {
-        events.push(note("kick", beat, 0.78, 0.1));
-      }
-    }
+    addSequence(0, 0.25, ["snare", "kick", "snare", "snare", "snare", "kick", "rackTom", "snare", "floorTom", "snare", "floorTom", "kick", "snare", "floorTom", "snare", "floorTom"], 0.78);
   }
 
   addCrash(events, 3.75, true, 0.94);
@@ -335,17 +538,78 @@ function buildFill(family, variant) {
 
 function buildIntro(family) {
   const events = [];
-  addCrash(events, 0, false, 0.94);
-  events.push(note("kick", 0, 0.98, 0.18));
-  events.push(note("snare", 1.5, 0.9, 0.12));
-  events.push(note("kick", 2, 0.92, 0.14));
-  addCrash(events, 2, true, 0.82);
+  const hitsByStyle = {
+    "crash-count": [
+      ["crashLeft", 0, 0.94],
+      ["kick", 0, 0.96],
+      ["snare", 1, 0.88],
+      ["kick", 2, 0.94],
+      ["snare", 3, 0.92],
+      ["snare", 3.5, 0.82],
+      ["snare", 3.75, 0.94],
+    ],
+    "dbeat-pickup": [
+      ["crashLeft", 0, 0.92],
+      ["kick", 0, 0.95],
+      ["snare", 1, 0.88],
+      ["kick", 1.5, 0.86],
+      ["floorTom", 2.5, 0.84],
+      ["snare", 3, 0.9],
+      ["floorTom", 3.5, 0.86],
+      ["snare", 3.75, 0.92],
+    ],
+    "fastcore-chokes": [
+      ["crashLeft", 0, 0.92],
+      ["kick", 0, 0.96],
+      ["snare", 1, 0.9],
+      ["crashRight", 2, 0.9],
+      ["kick", 2, 0.94],
+      ["snare", 3, 0.82],
+      ["snare", 3.25, 0.76],
+      ["snare", 3.5, 0.84],
+      ["snare", 3.75, 0.94],
+    ],
+    "stop-start": [
+      ["crashLeft", 0, 0.94],
+      ["kick", 0, 0.96],
+      ["snare", 1, 0.9],
+      ["kick", 2, 0.94],
+      ["floorTom", 2.5, 0.84],
+      ["snare", 3.5, 0.86],
+      ["snare", 3.75, 0.94],
+    ],
+    "blast-pickup": [
+      ["crashLeft", 0, 0.94],
+      ["kick", 0, 0.96],
+      ["snare", 1, 0.9],
+      ["kick", 2, 0.9],
+      ["snare", 2.5, 0.84],
+      ["kick", 3, 0.88],
+      ["snare", 3.25, 0.8],
+      ["kick", 3.5, 0.84],
+      ["snare", 3.75, 0.94],
+    ],
+    "two-step-count": [
+      ["crashLeft", 0, 0.92],
+      ["kick", 0, 0.96],
+      ["snare", 1, 0.9],
+      ["kick", 2, 0.94],
+      ["snare", 3, 0.9],
+      ["floorTom", 3.5, 0.84],
+      ["snare", 3.75, 0.92],
+    ],
+  };
 
-  for (const beat of [3, 3.25, 3.5, 3.75]) {
-    events.push(note("snare", beat, beat === 3.75 ? 0.95 : 0.74, 0.12));
+  for (const [drum, beat, velocity] of hitsByStyle[family.introStyle] ?? hitsByStyle["crash-count"]) {
+    events.push(note(drum, beat, velocity, drum.startsWith("crash") ? 0.5 : 0.14));
   }
-  events.push(note("hatOpen", 3.5, 0.58, 0.25));
+
+  events.push(note("hatOpen", 3.5, 0.68, 0.25));
   return events;
+}
+
+function barPattern(section, bar) {
+  return section.bars[bar % section.bars.length];
 }
 
 function buildGroovyDrummerBeatDefinitions() {
@@ -355,7 +619,7 @@ function buildGroovyDrummerBeatDefinitions() {
     definitions.push({
       family: family.name,
       categoryName: "Intros / Stops",
-      name: `${family.name} - Intro Stops`,
+      name: `${family.name} - ${family.introName}`,
       bpm: family.bpm,
       bars: 1,
       events: buildIntro(family),
@@ -392,14 +656,14 @@ function buildGroovyDrummerBeatDefinitions() {
       bars: 2,
       events: buildBlast(family),
     });
-    for (const fillVariant of ["Tom Run", "Snare Break"]) {
+    for (const fill of family.fills) {
       definitions.push({
         family: family.name,
         categoryName: "Fills",
-        name: `${family.name} - ${fillVariant}`,
+        name: `${family.name} - ${fill.name}`,
         bpm: family.bpm,
         bars: 1,
-        events: buildFill(family, fillVariant),
+        events: buildFill(fill),
       });
     }
   }
