@@ -135,6 +135,9 @@ export async function loadHomeKitManifest() {
       throw new Error("Home Kit samples are missing. Run npm run prepare:home-kit.");
     }
     return response.json() as Promise<SampleManifest>;
+  }).catch((error) => {
+    manifestPromise = null;
+    throw error;
   });
   return manifestPromise;
 }

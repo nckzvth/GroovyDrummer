@@ -43,8 +43,14 @@ export class HomeKitSampleEngine {
 
   async play(groove: Groove, loop: boolean, tempoOverride?: number) {
     const token = ++this.playbackToken;
+    this.clearTransport();
+    this.stopActiveSources();
+
     this.onStatus?.("Starting audio");
     await startToneAudio();
+    if (token !== this.playbackToken) {
+      return;
+    }
 
     this.onStatus?.("Loading MIDI");
     const midi = await loadGrooveMidi(groove);
@@ -61,7 +67,7 @@ export class HomeKitSampleEngine {
       .filter((event): event is typeof event & { articulation: SampleArticulation } => event.articulation !== null);
 
     this.onStatus?.("Loading samples");
-    await this.ensureEvents(events);
+    await this.ensureEvents(events, token);
     if (token !== this.playbackToken) {
       return;
     }
@@ -76,7 +82,9 @@ export class HomeKitSampleEngine {
 
     for (const event of events) {
       Tone.Transport.schedule((time) => {
-        this.trigger(event.articulation, time, event.velocity);
+        if (this.playbackToken === token) {
+          this.trigger(event.articulation, time, event.velocity, token);
+        }
       }, event.time);
     }
 
@@ -105,8 +113,12 @@ export class HomeKitSampleEngine {
     this.master.gain.value = dbToGain(db);
   }
 
-  private async ensureEvents(events: Array<{ articulation: SampleArticulation; velocity: number }>) {
+  private async ensureEvents(events: Array<{ articulation: SampleArticulation; velocity: number }>, token: number) {
     const manifest = await loadHomeKitManifest();
+    if (token !== this.playbackToken) {
+      return;
+    }
+
     this.manifest = manifest;
     const urls = new Set<string>();
 
@@ -127,7 +139,9 @@ export class HomeKitSampleEngine {
     await Promise.all(urlList.map(async (url) => {
       await this.loadBuffer(url);
       loaded += 1;
-      this.onStatus?.(`Loading samples ${loaded}/${urlList.length}`);
+      if (token === this.playbackToken) {
+        this.onStatus?.(`Loading samples ${loaded}/${urlList.length}`);
+      }
     }));
   }
 
@@ -142,12 +156,15 @@ export class HomeKitSampleEngine {
         throw new Error(`Unable to load sample ${url.split("/").pop() ?? url}`);
       }
       return this.context.decodeAudioData(await response.arrayBuffer());
-    }), `Timed out loading sample ${url.split("/").pop() ?? url}`);
+    }), `Timed out loading sample ${url.split("/").pop() ?? url}`, 30000).catch((error) => {
+      this.buffers.delete(url);
+      throw error;
+    });
     this.buffers.set(url, promise);
     return promise;
   }
 
-  private trigger(articulation: SampleArticulation, time: number, velocity: number) {
+  private trigger(articulation: SampleArticulation, time: number, velocity: number, token: number) {
     if (!this.manifest) {
       return;
     }
@@ -169,6 +186,10 @@ export class HomeKitSampleEngine {
       }
 
       void buffer.then((audioBuffer) => {
+        if (token !== this.playbackToken) {
+          return;
+        }
+
         const source = this.context.createBufferSource();
         const gain = this.context.createGain();
         const safeTime = Math.max(time, this.context.currentTime);
@@ -225,11 +246,11 @@ function dbToGain(db: number) {
   return 10 ** (db / 20);
 }
 
-function withTimeout<T>(promise: Promise<T>, message: string) {
+function withTimeout<T>(promise: Promise<T>, message: string, ms: number) {
   return Promise.race([
     promise,
     new Promise<T>((_, reject) => {
-      window.setTimeout(() => reject(new Error(message)), 15000);
+      window.setTimeout(() => reject(new Error(message)), ms);
     }),
   ]);
 }

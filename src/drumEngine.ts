@@ -129,14 +129,17 @@ class SyntheticDrumPreviewEngine {
 
   async play(groove: Groove, loop: boolean, tempoOverride?: number) {
     const token = ++this.playbackToken;
+    this.clearTransport();
+
     await startToneAudio();
+    if (token !== this.playbackToken) {
+      return;
+    }
 
     const midi = await loadGrooveMidi(groove);
     if (token !== this.playbackToken) {
       return;
     }
-
-    this.clearTransport();
 
     const schedule = makePlaybackSchedule(groove, midi, tempoOverride);
     const notes = schedule.notes

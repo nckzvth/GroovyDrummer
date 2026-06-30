@@ -23,6 +23,7 @@ import {
   type BuilderLane,
   type BuilderState,
 } from "./customGroove";
+import { startToneAudio } from "./audioStart";
 import { DrumPreviewEngine, previewEngineOptions } from "./drumEngine";
 import {
   downloadGrooveMidi,
@@ -63,8 +64,11 @@ let state: State;
 let builderState: BuilderState = createInitialBuilderState();
 let filteredGrooves: Groove[] = [];
 let displayedGrooves: Groove[] = [];
+let playbackRequestId = 0;
+let audioPrimePromise: Promise<void> | null = null;
 
 engine.onStop = () => {
+  playbackRequestId += 1;
   state.playingId = null;
   renderPlaybackSurface();
   setStatus("Ready");
@@ -218,6 +222,9 @@ function renderShell() {
 }
 
 function bindEvents() {
+  window.addEventListener("pointerdown", primeAudioFromGesture, { capture: true });
+  window.addEventListener("keydown", primeAudioFromGesture, { capture: true });
+
   byId("packNav").addEventListener("click", (event) => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-pack-id]");
     if (!button) {
@@ -292,6 +299,7 @@ function bindEvents() {
   });
 
   byId("stopButton").addEventListener("click", () => {
+    playbackRequestId += 1;
     state.playingId = null;
     engine.stop();
     renderPlaybackSurface();
@@ -400,6 +408,18 @@ function bindEvents() {
   byId("builderPanel").addEventListener("keydown", (event) => {
     handleBuilderKeydown(event);
   });
+}
+
+function primeAudioFromGesture() {
+  if (audioPrimePromise) {
+    return;
+  }
+
+  audioPrimePromise = startToneAudio()
+    .catch(() => undefined)
+    .finally(() => {
+      audioPrimePromise = null;
+    });
 }
 
 function renderAll() {
@@ -656,6 +676,7 @@ function handleBuilderClick(event: Event) {
   if (action === "play") {
     const groove = currentBuilderGroove();
     if (isBuilderPlaying()) {
+      playbackRequestId += 1;
       state.playingId = null;
       engine.stop();
       renderBuilderPage();
@@ -879,6 +900,7 @@ function stopBuilderPlaybackIfNeeded() {
   }
 
   state.playingId = null;
+  playbackRequestId += 1;
   engine.stop(false);
   setStatus("Ready");
   updateBuilderPreviewButton();
@@ -1006,6 +1028,7 @@ function patternHtml(groove: Groove) {
 
 async function togglePlayback(groove: Groove) {
   if (state.playingId === groove.id) {
+    playbackRequestId += 1;
     state.playingId = null;
     engine.stop();
     renderPlaybackSurface();
@@ -1016,6 +1039,7 @@ async function togglePlayback(groove: Groove) {
 }
 
 async function startPlayback(groove: Groove) {
+  const requestId = ++playbackRequestId;
   const previewTempo = effectivePreviewTempo(groove);
   if (!state.tempoDirty) {
     state.previewTempo = previewTempo;
@@ -1028,10 +1052,14 @@ async function startPlayback(groove: Groove) {
 
   try {
     await engine.play(groove, state.loop, previewTempo);
-    if (state.playingId === groove.id) {
+    if (requestId === playbackRequestId && state.playingId === groove.id) {
       setStatus(`Playing ${groove.grooveName} at ${formatTempo(previewTempo)} BPM`);
     }
   } catch (error) {
+    if (requestId !== playbackRequestId) {
+      return;
+    }
+
     state.playingId = null;
     renderPlaybackSurface();
     setStatus(error instanceof Error ? error.message : "Playback failed");

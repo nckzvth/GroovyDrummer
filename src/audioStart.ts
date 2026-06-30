@@ -3,16 +3,20 @@ import * as Tone from "tone";
 export async function startToneAudio() {
   const toneContext = Tone.getContext();
   const rawContext = Tone.getContext().rawContext as AudioContext;
-  const result = await Promise.race([
-    Tone.start().then(() => "started" as const),
-    timeout("timeout" as const, 2500),
+
+  const startTone = Tone.start().catch(() => undefined);
+  const resumeTone = toneContext.resume().catch(() => undefined);
+  const resumeRaw = rawContext.state === "running"
+    ? Promise.resolve()
+    : rawContext.resume().catch(() => undefined);
+
+  await Promise.race([
+    Promise.all([startTone, resumeTone, resumeRaw]),
+    timeout("timeout" as const, 3000),
   ]);
 
-  if (result === "timeout" && rawContext.state !== "running") {
-    await Promise.race([
-      toneContext.resume().catch(() => undefined),
-      timeout(undefined, 1200),
-    ]);
+  if (rawContext.state !== "running") {
+    throw new Error("Audio is suspended. Click Preview again.");
   }
 }
 
