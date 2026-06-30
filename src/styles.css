@@ -662,6 +662,7 @@ h1 {
 }
 
 .builder-grid-head,
+.builder-measure-ruler,
 .builder-lane {
   display: grid;
   grid-template-columns: 130px 170px 120px 120px 42px minmax(430px, 1fr);
@@ -679,6 +680,62 @@ h1 {
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.builder-measure-ruler {
+  min-height: 46px;
+  border-bottom: 1px solid var(--line);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.58), rgba(247, 248, 245, 0.42));
+}
+
+.builder-ruler-steps {
+  display: grid;
+  grid-template-columns: repeat(var(--builder-steps), minmax(18px, 1fr));
+  gap: 2px;
+  min-width: 0;
+}
+
+.builder-measure-block {
+  display: grid;
+  grid-column: span 16;
+  grid-template-rows: 20px 17px;
+  min-width: 0;
+  border-left: 3px solid var(--ink);
+  border-right: 1px solid var(--line-strong);
+}
+
+.builder-measure-label {
+  overflow: hidden;
+  padding: 2px 6px 0;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.builder-beat-ruler {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2px;
+  padding-right: 2px;
+}
+
+.builder-beat-ruler span {
+  min-width: 0;
+  border-left: 2px solid var(--line-strong);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 15px;
+  padding-left: 4px;
+}
+
+.builder-beat-ruler span:first-child {
+  border-left-color: transparent;
 }
 
 .builder-lane {
@@ -750,10 +807,12 @@ h1 {
 }
 
 .builder-step.beat-start {
+  border-left-width: 2px;
   border-left-color: var(--line-strong);
 }
 
 .builder-step.bar-start {
+  border-left-width: 3px;
   border-left-color: var(--ink);
 }
 
@@ -860,6 +919,7 @@ h1 {
   }
 
   .builder-grid-head,
+  .builder-measure-ruler,
   .builder-lane {
     grid-template-columns: 124px 158px 112px 112px 38px minmax(390px, 1fr);
     min-width: 960px;
@@ -966,6 +1026,7 @@ h1 {
   }
 
   .builder-grid-head,
+  .builder-measure-ruler,
   .builder-lane {
     min-width: 860px;
   }

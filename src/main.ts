@@ -539,8 +539,31 @@ function builderHtml(groove: Groove) {
         <span></span>
         <span>Steps</span>
       </div>
+      ${builderMeasureRulerHtml()}
       <div class="builder-lanes">
         ${builderState.lanes.map((lane) => builderLaneHtml(lane)).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function builderMeasureRulerHtml() {
+  return `
+    <div class="builder-measure-ruler" aria-label="Measure and beat ruler">
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <div class="builder-ruler-steps">
+        ${Array.from({ length: builderState.bars }, (_, index) => `
+          <div class="builder-measure-block">
+            <span class="builder-measure-label">Measure ${index + 1}</span>
+            <div class="builder-beat-ruler" aria-label="Measure ${index + 1} beats">
+              ${[1, 2, 3, 4].map((beat) => `<span>${beat}</span>`).join("")}
+            </div>
+          </div>
+        `).join("")}
       </div>
     </div>
   `;
