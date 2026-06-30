@@ -30,6 +30,7 @@ type RenderEvent = {
 
 const sampleRate = 44100;
 const renderTailSeconds = 4;
+const sampleLoadTimeoutMs = 30000;
 
 let decodeContext: AudioContext | null = null;
 const bufferCache = new Map<string, Promise<AudioBuffer>>();
@@ -58,6 +59,17 @@ export async function renderGrooveStems(groove: Groove, tempo: number) {
     });
   }
   return files;
+}
+
+export async function releaseAudioRendererResources() {
+  bufferCache.clear();
+
+  const context = decodeContext;
+  decodeContext = null;
+
+  if (context && context.state !== "closed") {
+    await context.close().catch(() => undefined);
+  }
 }
 
 async function renderGrooveAudio(groove: Groove, tempo: number, target: StemTarget) {
@@ -169,11 +181,14 @@ function loadBuffer(url: string) {
     return cached;
   }
 
-  const promise = fetch(url).then(async (response) => {
+  const promise = withTimeout(fetch(url).then(async (response) => {
     if (!response.ok) {
       throw new Error(`Unable to load sample ${url.split("/").pop() ?? url}`);
     }
     return getDecodeContext().decodeAudioData(await response.arrayBuffer());
+  }), `Timed out loading sample ${url.split("/").pop() ?? url}`, sampleLoadTimeoutMs).catch((error) => {
+    bufferCache.delete(url);
+    throw error;
   });
   bufferCache.set(url, promise);
   return promise;
@@ -182,4 +197,13 @@ function loadBuffer(url: string) {
 function getDecodeContext() {
   decodeContext ??= new AudioContext({ sampleRate });
   return decodeContext;
+}
+
+function withTimeout<T>(promise: Promise<T>, message: string, ms: number) {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      window.setTimeout(() => reject(new Error(message)), ms);
+    }),
+  ]);
 }

@@ -66,6 +66,7 @@ let filteredGrooves: Groove[] = [];
 let displayedGrooves: Groove[] = [];
 let playbackRequestId = 0;
 let audioPrimePromise: Promise<void> | null = null;
+let exportInProgress = false;
 
 engine.onStop = () => {
   playbackRequestId += 1;
@@ -368,7 +369,11 @@ function bindEvents() {
 
   byId("midiZipButton").addEventListener("click", () => {
     const grooves = selectedGrooves();
-    void runExportAction(grooves, () => exportSelectedAudioZip(grooves, "midi", effectivePreviewTempo), "ZIP ready");
+    void runExportAction(
+      grooves,
+      () => exportSelectedAudioZip(grooves, "midi", effectivePreviewTempo),
+      selectedExportMessage(grooves, "midi"),
+    );
   });
 
   byId("mixZipButton").addEventListener("click", () => {
@@ -376,7 +381,7 @@ function bindEvents() {
     void runExportAction(
       grooves,
       () => exportSelectedAudioZip(grooves, "mix-wav", effectivePreviewTempo, renderProgress),
-      "ZIP ready",
+      selectedExportMessage(grooves, "mix-wav"),
     );
   });
 
@@ -385,7 +390,7 @@ function bindEvents() {
     void runExportAction(
       grooves,
       () => exportSelectedAudioZip(grooves, "stems-zip", effectivePreviewTempo, renderProgress),
-      "ZIP ready",
+      selectedExportMessage(grooves, "stems-zip"),
     );
   });
 
@@ -1081,6 +1086,13 @@ async function runExportAction(grooves: Groove[], action: () => Promise<void>, d
     return;
   }
 
+  if (exportInProgress) {
+    setStatus("Export already in progress");
+    return;
+  }
+
+  exportInProgress = true;
+  cancelPlaybackForExport();
   setExportButtons(false);
   setStatus(`${grooves.length} pending`);
 
@@ -1090,8 +1102,16 @@ async function runExportAction(grooves: Groove[], action: () => Promise<void>, d
   } catch (error) {
     setStatus(error instanceof Error ? error.message : "Export failed");
   } finally {
+    exportInProgress = false;
     setExportButtons(true);
   }
+}
+
+function cancelPlaybackForExport() {
+  playbackRequestId += 1;
+  state.playingId = null;
+  engine.stop(false);
+  renderPlaybackSurface();
 }
 
 async function runSingleGrooveExport(groove: Groove, kind: AudioExportKind) {
@@ -1117,6 +1137,13 @@ function singleExportMessage(groove: Groove, kind: AudioExportKind) {
   return kind === "mix-wav" ? "Mix WAV ready" : "Stems ZIP ready";
 }
 
+function selectedExportMessage(grooves: Groove[], kind: AudioExportKind) {
+  if (grooves.length === 1) {
+    return singleExportMessage(grooves[0], kind);
+  }
+  return "ZIP ready";
+}
+
 function renderProgress(current: number, total: number, groove: Groove) {
   setStatus(`Rendering ${current}/${total}: ${groove.grooveName}`);
 }
@@ -1138,17 +1165,37 @@ function toggleSelection(id: string, selected: boolean) {
 
 function renderSelection() {
   const count = state.selectedIds.size;
+  const disabled = exportInProgress || count === 0;
   byId("selectedCount").textContent = `${count} selected`;
-  byId<HTMLButtonElement>("midiZipButton").disabled = count === 0;
-  byId<HTMLButtonElement>("mixZipButton").disabled = count === 0;
-  byId<HTMLButtonElement>("stemsZipButton").disabled = count === 0;
-  byId<HTMLButtonElement>("clearSelectionButton").disabled = count === 0;
+  setButtonLabel("midiZipButton", count === 1 ? "MIDI" : "MIDI ZIP");
+  setButtonLabel("mixZipButton", count === 1 ? "Mix WAV" : "Mix WAV ZIP");
+  setButtonLabel("stemsZipButton", "Stems ZIP");
+  byId<HTMLButtonElement>("midiZipButton").disabled = disabled;
+  byId<HTMLButtonElement>("mixZipButton").disabled = disabled;
+  byId<HTMLButtonElement>("stemsZipButton").disabled = disabled;
+  byId<HTMLButtonElement>("clearSelectionButton").disabled = disabled;
+}
+
+function setButtonLabel(buttonId: string, label: string) {
+  const labelNode = byId(buttonId).querySelector("span");
+  if (labelNode) {
+    labelNode.textContent = label;
+  }
 }
 
 function setExportButtons(enabled: boolean) {
   byId<HTMLButtonElement>("midiZipButton").disabled = !enabled || state.selectedIds.size === 0;
   byId<HTMLButtonElement>("mixZipButton").disabled = !enabled || state.selectedIds.size === 0;
   byId<HTMLButtonElement>("stemsZipButton").disabled = !enabled || state.selectedIds.size === 0;
+  byId<HTMLButtonElement>("clearSelectionButton").disabled = !enabled || state.selectedIds.size === 0;
+  document.querySelectorAll<HTMLSelectElement>("select[data-export-id]").forEach((select) => {
+    select.disabled = !enabled;
+  });
+  document.querySelectorAll<HTMLButtonElement>(
+    "[data-builder-action='midi'], [data-builder-action='mix-wav'], [data-builder-action='stems-zip']",
+  ).forEach((button) => {
+    button.disabled = !enabled;
+  });
 }
 
 function updateSelectVisibleInput() {
